@@ -2,4 +2,6 @@
 
 mod app;
 mod game;
+mod gameplay;
+mod grid_math;
 pub use app::App;
