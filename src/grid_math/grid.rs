@@ -1,5 +1,3 @@
-use std::path::Iter;
-
 use egui::ahash::{HashMap, HashMapExt};
 
 use super::{dir::Dir, Pos2, Rect, Vec2};
@@ -44,6 +42,14 @@ impl<T> Grid<T> {
 
     pub fn iter(&self) -> impl Iterator<Item=(&Pos2, &T)> {
         self.data.iter()
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item=(&Pos2, &mut T)> {
+        self.data.iter_mut()
+    }
+
+    pub fn bounds(&self) -> Rect {
+        self.bounds
     }
 
     pub fn recompute_bounds(&mut self) {

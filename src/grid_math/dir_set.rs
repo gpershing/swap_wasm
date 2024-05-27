@@ -1,6 +1,6 @@
 use std::ops::{Index, IndexMut};
 
-use super::Dir;
+use super::{Dir, Rotation};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -31,6 +31,15 @@ impl DirSet {
 
     pub const fn inverse(self) -> Self {
         Self { e: !self.e, n: !self.n, w: !self.w, s: !self.s }
+    }
+
+    pub const fn rotated(self, rotation: Rotation) -> DirSet {
+        match rotation {
+            Rotation::None => self,
+            Rotation::CCW => Self { e: self.s, n: self.e, w: self.n, s: self.w },
+            Rotation::Half => Self { e: self.w, n: self.s, w: self.e, s: self.w },
+            Rotation::CW => Self { e: self.n, n: self.w, w: self.s, s: self.e },
+        }
     }
 
     pub fn iter(&self) -> impl Iterator<Item = Dir> + '_ {

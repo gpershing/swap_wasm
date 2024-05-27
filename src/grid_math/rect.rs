@@ -1,12 +1,10 @@
-use std::ops::Range;
-
 use super::{pos2::Pos2, vec2::Vec2};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct Rect {
-    origin: Pos2,
-    size: Vec2
+    pub origin: Pos2,
+    pub size: Vec2
 }
 
 impl Rect {

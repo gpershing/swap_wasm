@@ -14,6 +14,10 @@ impl Vec2 {
             x, y
         }
     }
+
+    pub const fn to_vecf(self) -> egui::Vec2 {
+        egui::Vec2 { x: self.x as f32, y: self.y as f32 }
+    } 
 }
 
 impl From<(i8, i8)> for Vec2 {

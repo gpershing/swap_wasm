@@ -1,15 +1,17 @@
-use crate::game::Game;
+use crate::{gameplay::Puzzle, ux::{update_game, GameState, GameStyle}};
 
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct App {
-    game: Game
+    puzzle: Puzzle,
+    game_state: GameState
 }
 
 impl Default for App {
     fn default() -> Self {
         Self {
-            game: Game::default()
+            puzzle: Puzzle::new(),
+            game_state: GameState::new()
         }
     }
 }
@@ -27,6 +29,13 @@ impl App {
         }
 
         Default::default()
+    }
+}
+
+impl App {
+    pub fn set_puzzle(&mut self, puzzle: Puzzle) {
+        self.puzzle = puzzle;
+        self.game_state = GameState::new();
     }
 }
 
@@ -55,6 +64,11 @@ impl eframe::App for App {
                     });
                     ui.add_space(16.0);
                 }
+                ui.menu_button("DEBUG", |ui| {
+                    if ui.button("Reset").clicked() {
+                        self.set_puzzle(Puzzle::new());
+                    }
+                });
 
                 egui::widgets::global_dark_light_mode_buttons(ui);
             });
@@ -64,7 +78,12 @@ impl eframe::App for App {
             // The central panel the region left after adding TopPanel's and SidePanel's
             ui.heading("swap");
 
-            self.game.ui(ui);
+            ui.centered_and_justified(|ui| {
+                update_game(ui, &mut self.puzzle, &mut self.game_state, &GameStyle {
+                    scale: 50.0
+                });
+            });
+            // self.game.ui(ui);
 
             // ui.horizontal(|ui| {
             //     ui.label("Write something: ");
