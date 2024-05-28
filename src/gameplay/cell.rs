@@ -1,36 +1,30 @@
 use crate::grid_math::{DirSet, Rotation};
 
-use super::{Color, ColorSet};
+use super::{cell_id::CellId, puzzle::PuzzleCell, Color, ColorSet};
 
 #[derive(Debug, Clone, Copy)]
 #[derive(serde::Serialize, serde:: Deserialize)]
 pub struct Cell {
-    id: usize,
+    id: CellId,
     connections: DirSet,
     source: Option<Color>,
     fill: ColorSet
 }
 
 impl Cell {
-    pub const fn new(id: usize, connections: DirSet) -> Self {
+    pub const fn new(id: CellId, puzzle_cell: PuzzleCell) -> Self {
         Self {
             id,
-            connections,
-            source: None,
-            fill: ColorSet::empty()
+            connections: puzzle_cell.connections,
+            source: puzzle_cell.source,
+            fill: match puzzle_cell.source {
+                Some(source) => ColorSet::singleton(source),
+                None => ColorSet::empty(),
+            }
         }
     }
 
-    pub const fn new_source(id: usize, connections: DirSet, source: Color) -> Self {
-        Self {
-            id,
-            connections,
-            source: Some(source),
-            fill: ColorSet::singleton(source)
-        }
-    }
-
-    pub const fn id(&self) -> usize {
+    pub const fn id(&self) -> CellId {
         self.id
     }
 
@@ -63,5 +57,11 @@ impl Cell {
 
     pub fn set_fill(&mut self, fill: ColorSet) {
         self.fill = fill;
+    }
+
+    pub fn can_swap(first_cell: &Cell, second_cell: &Cell) -> bool {
+        (first_cell.fill().contains(Color::Purple) || second_cell.fill().contains(Color::Purple))
+            && !first_cell.fill().contains(Color::Red)
+            && !second_cell.fill().contains(Color::Red)
     }
 }

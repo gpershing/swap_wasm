@@ -2,6 +2,7 @@ use egui::ahash::{HashMap, HashMapExt};
 
 use super::{dir::Dir, Pos2, Rect, Vec2};
 
+#[derive(Clone)]
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Grid<T> {
     data: HashMap<Pos2, T>,
@@ -38,6 +39,10 @@ impl<T> Grid<T> {
 
     pub fn remove(&mut self, pos: Pos2) -> Option<T> {
         self.data.remove(&pos)
+    }
+
+    pub fn into_iter(self) -> impl Iterator<Item=(Pos2, T)> {
+        self.data.into_iter()
     }
 
     pub fn iter(&self) -> impl Iterator<Item=(&Pos2, &T)> {

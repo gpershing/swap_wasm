@@ -1,25 +1,19 @@
-use egui::{emath::{self, RectTransform}, Color32, EventFilter, Id, Modifiers, Painter, Pos2, Rect, Response, Sense, Shape, Stroke, Ui, Vec2, Widget};
+use egui::{emath::{self, RectTransform}, Color32, EventFilter, Modifiers, Pos2, Rect, Response, Rounding, Sense, Shape, Stroke, Ui, Vec2};
 
-use crate::{gameplay::{Cell, Puzzle, SwapRecord}, grid_math};
+use crate::{gameplay::{CellId, Color, PlayingPuzzle}, grid_math};
 
-#[derive(serde::Deserialize, serde::Serialize)]
 pub struct GameState {
-    #[serde(skip)]
     input: GameInput,
-    #[serde(skip)]
-    highlight: Option<usize>,
-    #[serde(skip)]
-    selected: Option<usize>,
-
-    history: Vec<SwapRecord>
+    highlight: Option<CellId>,
+    selected: Option<CellId>
 }
 
 impl GameState {
     pub fn new() -> GameState {
-        GameState { input: GameInput::None, selected: None, highlight: None, history: Vec::new() }
+        GameState { input: GameInput::None, selected: None, highlight: None }
     }
 
-    pub fn is_dragging(&self, id: usize) -> bool {
+    pub fn is_dragging(&self, id: CellId) -> bool {
         match self.input {
             GameInput::Drag(Some(drag)) => drag == id,
             GameInput::None => false,
@@ -37,8 +31,8 @@ pub struct GameStyle {
 #[derive(Debug, Clone, Copy)]
 enum GameInput {
     None,
-    Down(Option<usize>),
-    Drag(Option<usize>),
+    Down(Option<CellId>),
+    Drag(Option<CellId>),
 }
 
 impl GameInput {
@@ -59,18 +53,18 @@ impl Default for GameInput {
 
 enum GameInputResponse {
     None,
-    Down(Option<usize>),
-    Up(Option<usize>),
-    Drag(Option<usize>),
-    Drop(Option<usize>, Option<usize>),
+    Down(Option<CellId>),
+    Up(Option<CellId>),
+    Drag(Option<CellId>),
+    Drop(Option<CellId>, Option<CellId>),
 }
 
-fn update_input(input: &mut GameInput, ui: &Ui, response: Response, puzzle: &Puzzle, to_game_coords: &RectTransform) -> GameInputResponse {
-    fn get_input_id(ui: &Ui, puzzle: &Puzzle, to_game_coords: &RectTransform) -> Option<usize> {
+fn update_input(input: &mut GameInput, ui: &Ui, response: Response, puzzle: &PlayingPuzzle, to_game_coords: &RectTransform) -> GameInputResponse {
+    fn get_input_id(ui: &Ui, puzzle: &PlayingPuzzle, to_game_coords: &RectTransform) -> Option<CellId> {
         ui.ctx().pointer_interact_pos().and_then(|pos| {
             let game_coord_f = to_game_coords * pos;
             let game_coord = grid_math::Pos2::new(game_coord_f.x.round() as i8, game_coord_f.y.round() as i8);
-            puzzle.get(game_coord).map(|cell| cell.id())
+            puzzle.id_for_position(game_coord)
         })
     }
 
@@ -109,16 +103,7 @@ fn update_input(input: &mut GameInput, ui: &Ui, response: Response, puzzle: &Puz
     
 }
 
-pub fn undo(puzzle: &mut Puzzle, state: &mut GameState) -> bool {
-    if let Some(record) = state.history.pop() {
-        puzzle.try_undo_swap(record)
-    }
-    else {
-        false
-    }
-}
-
-pub fn handle_events(ui: &Ui, puzzle: &mut Puzzle, state: &mut GameState) {
+pub fn handle_events(ui: &Ui, puzzle: &mut PlayingPuzzle, state: &mut GameState) {
     let events = ui.input(|i| i.filtered_events(&EventFilter::default()));
     let did_undo = events.iter().any(|e| match e {
         egui::Event::Key {
@@ -130,19 +115,20 @@ pub fn handle_events(ui: &Ui, puzzle: &mut Puzzle, state: &mut GameState) {
         _ => false
     });
     if did_undo {
-        undo(puzzle, state);
+        let success = puzzle.try_undo();
     }
 }
 
 pub fn update_game(
     ui: &mut Ui,
-    puzzle: &mut Puzzle,
+    puzzle: &mut PlayingPuzzle,
     state: &mut GameState,
     style: &GameStyle) {
     let bounds = puzzle.bounds();
     let margin: egui::Margin = ui.style().spacing.window_margin;
-    let game_size = bounds.size.to_vecf() * style.scale + margin.sum();
-    let (response, painter) = ui.allocate_painter(game_size, Sense::click_and_drag());
+    let game_size = bounds.size.to_vecf() * style.scale;
+    let game_size_with_margins = game_size + margin.sum();
+    let (response, painter) = ui.allocate_painter(game_size_with_margins, Sense::click_and_drag());
 
     let game_rect = Rect::from_center_size(painter.clip_rect().center(), game_size);
     let game_coords = Rect::from_min_size(bounds.origin.to_posf() - Vec2::splat(0.5), bounds.size.to_vecf());
@@ -178,15 +164,34 @@ pub fn update_game(
     };
 
     if let Some((id_a, id_b)) = swap_action {
-        if let Some(record) = puzzle.try_swap(id_a, id_b) {
-            state.history.push(record);
+        if puzzle.try_swap(id_a, id_b) {
             println!("{:?}", puzzle.is_solved());
         }
     }
     
     handle_events(ui, puzzle, state);
 
-    for (grid_pos, cell) in puzzle.cells() {
+    let swap_indicator_y = game_rect.bottom() + style.scale * 0.15;
+    for swap_i in 0..puzzle.swap_limit() {
+        let filled = swap_i >= puzzle.swaps_made();
+        let t = (swap_i as f32 + 0.5) / (puzzle.swap_limit() as f32);
+        let center = Pos2::new(game_rect.right() * t + game_rect.left() * (1.0 - t), swap_indicator_y);
+        if filled {
+            painter.circle_filled(center, style.scale * 0.10, Color::Purple.color32());
+        }
+        else {
+            painter.circle_stroke(center, style.scale * 0.10, (1.0, Color::Purple.color32()));
+        }
+    }
+
+    for (grid_pos, _) in puzzle.iter_cells() {
+        let center = to_screen * grid_pos.to_posf();
+        painter.rect(
+            Rect::from_center_size(center, Vec2::splat(style.scale * 0.95)),
+            Rounding::same(style.scale * 0.05), Color32::GRAY, Stroke::NONE);
+    }
+
+    for (grid_pos, cell) in puzzle.iter_cells() {
         let center = if state.is_dragging(cell.id()) {
             ui.ctx().pointer_interact_pos().unwrap_or(Pos2::ZERO)
         }

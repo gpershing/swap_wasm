@@ -2310,6 +2310,7 @@ dependencies = [
  "enum-iterator",
  "env_logger",
  "log",
+ "rand",
  "serde",
  "wasm-bindgen-futures",
 ]

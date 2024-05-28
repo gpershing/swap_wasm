@@ -1,6 +1,6 @@
 use egui::Color32;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[derive(serde::Serialize, serde::Deserialize)]
 pub enum Color {
     Red,
@@ -13,6 +13,10 @@ pub enum Color {
 
 impl Color {
     pub const ALL: [Color; 6] = [Color::Red, Color::Orange, Color::Yellow, Color::Green, Color::Blue, Color::Purple];
+
+    pub const STOP: Color = Color::Red;
+    pub const CCW: Color = Color::Orange;
+    pub const CW: Color = Color::Yellow;
 
     pub const fn bit(self) -> u8 {
         match self {

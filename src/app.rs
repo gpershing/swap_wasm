@@ -1,16 +1,17 @@
-use crate::{gameplay::Puzzle, ux::{update_game, GameState, GameStyle}};
+use crate::{gameplay::{PlayingPuzzle, Puzzle}, generator::{generate_puzzle, GeneratorSettings}, ux::{update_game, GameState, GameStyle}};
 
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct App {
-    puzzle: Puzzle,
+    puzzle: PlayingPuzzle,
+    #[serde(skip)]
     game_state: GameState
 }
 
 impl Default for App {
     fn default() -> Self {
         Self {
-            puzzle: Puzzle::new(),
+            puzzle: PlayingPuzzle::new(Puzzle::debug_default()),
             game_state: GameState::new()
         }
     }
@@ -34,7 +35,7 @@ impl App {
 
 impl App {
     pub fn set_puzzle(&mut self, puzzle: Puzzle) {
-        self.puzzle = puzzle;
+        self.puzzle = PlayingPuzzle::new(puzzle);
         self.game_state = GameState::new();
     }
 }
@@ -66,7 +67,13 @@ impl eframe::App for App {
                 }
                 ui.menu_button("DEBUG", |ui| {
                     if ui.button("Reset").clicked() {
-                        self.set_puzzle(Puzzle::new());
+                        self.set_puzzle(generate_puzzle(&GeneratorSettings {
+                            red_sources: crate::generator::SourceSettings::Maybe,
+                            rotator_sources: crate::generator::SourceSettings::Definitely,
+                            size: crate::grid_math::Vec2 { x: 3, y: 5 },
+                            swap_count: 5,
+                            ..Default::default()
+                        }));
                     }
                 });
 

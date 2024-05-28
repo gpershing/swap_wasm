@@ -38,6 +38,11 @@ impl Pos2 {
     pub fn neighbors_using(self, dirs: impl Iterator<Item = Dir>) -> impl Iterator<Item = Pos2> {
         dirs.map(move |dir| self + dir.to_vec())
     }
+
+    // Direction from this position to another adjacent position. Returns None if the points are not adjacent.
+    pub fn adjacent_dir(self, other: Pos2) -> Option<Dir> {
+        Dir::ALL.into_iter().find(|d| self + d.to_vec() == other)
+    }
 }
 
 impl From<(i8, i8)> for Pos2 {

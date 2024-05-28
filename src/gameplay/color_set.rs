@@ -1,3 +1,5 @@
+use crate::grid_math::Rotation;
+
 use super::Color;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -39,5 +41,14 @@ impl ColorSet {
 
     pub fn iter(&self) -> impl Iterator<Item = Color> + '_ {
         Color::ALL.into_iter().filter(|c| self.contains(*c))
+    }
+    
+    pub fn get_rotation(self) -> Rotation {
+        match (self.contains(Color::CCW), self.contains(Color::CW)) {
+            (true, true) => Rotation::None,
+            (true, false) => Rotation::CCW,
+            (false, true) => Rotation::CW,
+            (false, false) => Rotation::None,
+        }
     }
 }

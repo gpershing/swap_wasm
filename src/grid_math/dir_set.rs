@@ -45,6 +45,16 @@ impl DirSet {
     pub fn iter(&self) -> impl Iterator<Item = Dir> + '_ {
         Dir::ALL.into_iter().filter(|d| self[*d])
     }
+
+    pub fn insert(&mut self, dir: Dir) -> bool {
+        let rv = self[dir];
+        self[dir] = true;
+        rv
+    }
+
+    pub fn contains(&mut self, dir: Dir) -> bool {
+        self[dir]
+    }
 }
 
 impl Index<Dir> for DirSet {
