@@ -1,6 +1,6 @@
 use std::iter;
 
-use super::{grid_index::GridIndex, grid_size::GridSize};
+use super::{grid_index::GridIndex, grid_size::GridSize, Direction};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -110,5 +110,50 @@ impl<T> Grid<T> {
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (GridIndex, &mut T)> + '_ {
         self.data.iter_mut().enumerate()
             .filter_map(|(li, data)| data.as_mut().map(|d| (get_index_from_linear_index(self.size, li), d)))
+    }
+}
+
+impl<T> Grid<T> {
+    pub fn get_neighbor(&self, index: GridIndex, direction: Direction) -> Option<(GridIndex, &T)> {
+        let index = index.moved_in(direction)?;
+        self.get(index).map(|item| (index, item))
+    }
+
+    pub fn get_neighbor_mut(&mut self, index: GridIndex, direction: Direction) -> Option<(GridIndex, &mut T)> {
+        let index = index.moved_in(direction)?;
+        self.get_mut(index).map(|item| (index, item))
+    }
+
+    pub fn iter_neighbors_for(&self, index: GridIndex, directions: impl Iterator<Item = Direction>) -> impl Iterator<Item = (GridIndex, Direction, &T)> {
+        directions.filter_map(move |dir| self.get_neighbor(index, dir).map(|(idx, item)| (idx, dir, item)))
+    }
+
+    pub fn iter_neighbors(&self, index: GridIndex) -> impl Iterator<Item = (GridIndex, Direction, &T)> {
+        self.iter_neighbors_for(index, Direction::ALL.into_iter())
+    }
+
+    pub fn neighbors_mut_for(&mut self, index: GridIndex, directions: impl Iterator<Item = Direction>) -> impl Iterator<Item = (GridIndex, Direction, &mut T)> {
+        let mut linear_indices: Vec<_> = directions
+            .filter_map(|dir| index
+                .moved_in(dir)
+                .and_then(|idx| get_linear_index(self.size, idx))
+                .map(|idx| (idx, index, dir)))
+            .collect();
+        linear_indices.sort_by(|a, b| a.0.cmp(&b.0));
+
+        let mut refs = Vec::new();
+        let mut all_refs = self.data.iter_mut();
+        let mut last_index = 0;
+        for (index, grid_index, dir) in linear_indices {
+            if let Some(Some(rf)) = all_refs.nth(index - last_index) {
+                refs.push((grid_index, dir, rf));
+            }
+            last_index = index;
+        }
+        refs.into_iter()
+    }
+
+    pub fn neighbors_mut(&mut self, index: GridIndex) -> impl Iterator<Item = (GridIndex, Direction, &mut T)> {
+        self.neighbors_mut_for(index, Direction::ALL.into_iter())
     }
 }

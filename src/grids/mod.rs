@@ -1,6 +1,10 @@
-mod grid;
+mod rotation;
+mod direction;
 mod grid_index;
 mod grid_size;
-pub use grid::*;
+mod grid;
+pub use rotation::*;
+pub use direction::*;
 pub use grid_index::*;
 pub use grid_size::*;
+pub use grid::*;
