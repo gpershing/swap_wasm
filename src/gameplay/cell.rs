@@ -1,11 +1,11 @@
-use crate::grid_math::{DirSet, Rotation};
+use crate::grids::{DirectionSet, Rotation};
 
-use super::{cell_id::CellId, puzzle::PuzzleCell, Color, ColorSet};
+use super::{cell_id::CellId, puzzle::{LayerConnection, PuzzleCell}, Color, ColorSet};
 
 #[derive(Debug, Clone, Copy)]
 #[derive(serde::Serialize, serde:: Deserialize)]
-pub struct  CellDataLayer {
-    connections: DirSet,
+pub struct  CellLayer {
+    connections: DirectionSet,
     fill: ColorSet
 }
 
@@ -13,11 +13,11 @@ pub struct  CellDataLayer {
 #[derive(serde::Serialize, serde:: Deserialize)]
 pub enum CellData {
     Normal {
-        layer: CellDataLayer,
+        layer: CellLayer,
         source: Option<Color>
     },
     Intersection {
-        layers: [CellDataLayer; 2]
+        layers: [CellLayer; 2]
     }
 }
 
@@ -31,11 +31,11 @@ pub struct Cell {
 impl Cell {
     pub const fn new(id: CellId, puzzle_cell: PuzzleCell) -> Self {
         let data = match puzzle_cell {
-            PuzzleCell::Normal { connections } => CellData::Normal { layer: CellDataLayer { connections, fill: ColorSet::empty() }, source: None },
-            PuzzleCell::Source { connections, source } => CellData::Normal { layer: CellDataLayer { connections, fill: ColorSet::singleton(source) }, source: Some(source) },
-            PuzzleCell::Intersection { layers } => CellData::Intersection { layers: [
-                CellDataLayer { connections: layers[0], fill: ColorSet::empty() },
-                CellDataLayer { connections: layers[1], fill: ColorSet::empty() }
+            PuzzleCell::Normal { connections } => CellData::Normal { layer: CellLayer { connections, fill: ColorSet::empty() }, source: None },
+            PuzzleCell::Source { connections, source } => CellData::Normal { layer: CellLayer { connections, fill: ColorSet::singleton(source) }, source: Some(source) },
+            PuzzleCell::Intersection { connections } => CellData::Intersection { layers: [
+                CellLayer { connections: connections.map(|c| c == LayerConnection::Layer0), fill: ColorSet::empty() },
+                CellLayer { connections: connections.map(|c| c == LayerConnection::Layer1), fill: ColorSet::empty() }
             ] },
         };
         Self {
@@ -48,6 +48,48 @@ impl Cell {
         self.id
     }
 
+    pub const fn get_layer_count(&self) -> usize {
+        match &self.data {
+            CellData::Normal { layer, source } => 1,
+            CellData::Intersection { layers } => 2,
+        }
+    }
+
+    pub const fn get_layer(&self, layer_idx: usize) -> Option<&CellLayer> {
+        match &self.data {
+            CellData::Normal { layer, source } => match layer_idx {
+                0 => Some(layer),
+                _ => None
+            },
+            CellData::Intersection { layers } => match layer_idx {
+                0 => Some(&layers[0]),
+                1 => Some(&layers[1]),
+                _ => None
+            }
+        }
+    }
+
+    pub const fn get_layer_mut(&mut self, layer_idx: usize) -> Option<&mut CellLayer> {
+        match &mut self.data {
+            CellData::Normal { layer, source } => match layer_idx {
+                0 => Some(layer),
+                _ => None
+            },
+            CellData::Intersection { layers } => match layer_idx {
+                0 => Some(&mut layers[0]),
+                1 => Some(&mut layers[1]),
+                _ => None
+            }
+        }
+    }
+
+    pub const fn source(&self) -> Option<Color> {
+        match self.data {
+            CellData::Normal { layer, source } => source,
+            CellData::Intersection { layers } => None,
+        }
+    }
+
     pub(crate) fn rotate(&mut self, rotation: Rotation) {
         match &mut self.data {
             CellData::Normal { layer, source } => {
@@ -57,13 +99,6 @@ impl Cell {
                 layers[0].connections = layers[0].connections.rotated(rotation);
                 layers[1].connections = layers[1].connections.rotated(rotation);
             }
-        }
-    }
-
-    pub const fn source(&self) -> Option<Color> {
-        match self.data {
-            CellData::Normal { layer, source } => source,
-            CellData::Intersection { layers } => None,
         }
     }
 

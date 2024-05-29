@@ -1,18 +1,27 @@
-use crate::grid_math::{DirSet, Grid};
+use crate::grids::{DirectionMap, DirectionSet, Grid};
+
 use super::Color;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(serde::Serialize, serde:: Deserialize)]
+pub enum LayerConnection {
+    None,
+    Layer0,
+    Layer1
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[derive(serde::Serialize, serde:: Deserialize)]
 pub enum PuzzleCell {
     Normal {
-        connections: DirSet
+        connections: DirectionSet
     },
     Source {
-        connections: DirSet,
+        connections: DirectionSet,
         source: Color
     },
     Intersection {
-        layers: [DirSet; 2]
+        connections: DirectionMap<LayerConnection>
     }
 }
 

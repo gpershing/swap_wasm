@@ -43,6 +43,12 @@ impl<T> DirectionMap<T> {
         self.data.iter_mut().enumerate()
             .map(|(idx, el)| (dir_for_idx(idx), el))
     }
+
+    pub fn map<Other>(&self, f: impl Fn(&T) -> Other) -> DirectionMap<Other> {
+        DirectionMap {
+            data: self.data.map(f)
+        }
+    }
 }
 
 impl<T> DirectionMap<T> where T : Copy {
