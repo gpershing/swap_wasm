@@ -1,4 +1,4 @@
-use crate::grid_math::Rotation;
+use crate::grids::Rotation;
 
 use super::Color;
 
