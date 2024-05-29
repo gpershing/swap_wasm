@@ -5,4 +5,5 @@ mod gameplay;
 mod grid_math;
 mod ux;
 mod generator;
+mod grids;
 pub use app::App;
