@@ -103,6 +103,10 @@ impl DirectionSet {
         rv
     }
 
+    pub fn len(&self) -> usize {
+        self.iter_set().count()
+    }
+
     pub fn iter_set(&self) -> impl Iterator<Item = Direction> + '_ {
         Direction::ALL.into_iter().filter(|d| self[d])
     }

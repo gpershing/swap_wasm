@@ -1,12 +1,12 @@
-use crate::grids::{DirectionSet, Rotation};
+use crate::grids::{Direction, DirectionSet, Rotation};
 
 use super::{cell_id::CellId, puzzle::{LayerConnection, PuzzleCell}, Color, ColorSet};
 
 #[derive(Debug, Clone, Copy)]
 #[derive(serde::Serialize, serde:: Deserialize)]
-pub struct  CellLayer {
-    connections: DirectionSet,
-    fill: ColorSet
+pub struct CellLayer {
+    pub connections: DirectionSet,
+    pub fill: ColorSet
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -83,6 +83,26 @@ impl Cell {
         }
     }
 
+    pub fn iter_layers(&self) -> impl Iterator<Item = &CellLayer> {
+        match &self.data {
+            CellData::Normal { layer, source } => [layer].into_iter(),
+            CellData::Intersection { layers } => layers.iter(),
+        }
+    }
+
+    pub fn get_layer_for_direction(&self, direction: Direction) -> Option<(usize, &CellLayer)> {
+        match &self.data {
+            CellData::Normal { layer, source } => if layer.connections.contains(direction) { Some((0, layer)) } else { None },
+            CellData::Intersection { layers } => if layers[0].connections.contains(direction) {
+                Some((0, &layers[0]))
+            } else if layers[1].connections.contains(direction) {
+                Some((1, &layers[1]))
+            } else {
+                None
+            },
+        }
+    }
+
     pub const fn source(&self) -> Option<Color> {
         match self.data {
             CellData::Normal { layer, source } => source,
@@ -102,6 +122,17 @@ impl Cell {
         }
     }
 
+    pub(crate) fn rotate_by_fill(&mut self) {
+        let ccw = self.has_color_in_any_layer(Color::CCW);
+        let cw = self.has_color_in_any_layer(Color::CW);
+        self.rotate(match (ccw, cw) {
+            (true, true) => Rotation::None,
+            (true, false) => Rotation::CCW,
+            (false, true) => Rotation::CW,
+            (false, false) => Rotation::None,
+        })
+    }
+
     pub fn set_min_fill(&mut self) {
         match &mut self.data {
             CellData::Normal { layer, source } => {
@@ -109,6 +140,18 @@ impl Cell {
                     Some(source) => ColorSet::singleton(*source),
                     None => ColorSet::empty(),
                 }
+            },
+            CellData::Intersection { layers } => {
+                layers[0].fill = ColorSet::empty();
+                layers[1].fill = ColorSet::empty();
+            },
+        }
+    }
+
+    pub fn clear_fill(&mut self) {
+        match &mut self.data {
+            CellData::Normal { layer, source } => {
+                layer.fill = ColorSet::empty()
             },
             CellData::Intersection { layers } => {
                 layers[0].fill = ColorSet::empty();
