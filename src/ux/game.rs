@@ -1,6 +1,6 @@
-use egui::{emath::{self, RectTransform}, Color32, Pos2, Rect, Response, Rounding, Sense, Shape, Stroke, Ui, Vec2};
+use egui::{emath::{self, RectTransform}, Color32, EventFilter, Modifiers, Pos2, Rect, Response, Rounding, Sense, Shape, Stroke, Ui, Vec2};
 
-use crate::{gameplay::PlayingPuzzle, grids::{Direction, GridIndex}};
+use crate::{gameplay::{Color, PlayingPuzzle}, grids::{Direction, GridIndex}};
 
 pub struct GameState {
     input: GameInput,
@@ -103,21 +103,21 @@ fn update_input(input: &mut GameInput, ui: &Ui, response: Response, puzzle: &Pla
     
 }
 
-// pub fn handle_events(ui: &Ui, puzzle: &mut PlayingPuzzle, state: &mut GameState) {
-//     let events = ui.input(|i| i.filtered_events(&EventFilter::default()));
-//     let did_undo = events.iter().any(|e| match e {
-//         egui::Event::Key {
-//             key: egui::Key::Z,
-//             pressed: true,
-//             modifiers,
-//             ..
-//         } if modifiers.matches_logically(Modifiers::COMMAND) => true,
-//         _ => false
-//     });
-//     if did_undo {
-//         let success = puzzle.try_undo();
-//     }
-// }
+pub fn handle_events(ui: &Ui, puzzle: &mut PlayingPuzzle, state: &mut GameState) {
+    let events = ui.input(|i| i.filtered_events(&EventFilter::default()));
+    let did_undo = events.iter().any(|e| match e {
+        egui::Event::Key {
+            key: egui::Key::Z,
+            pressed: true,
+            modifiers,
+            ..
+        } if modifiers.matches_logically(Modifiers::COMMAND) => true,
+        _ => false
+    });
+    if did_undo {
+        let success = puzzle.try_undo();
+    }
+}
 
 pub fn update_game(
     ui: &mut Ui,
@@ -169,20 +169,20 @@ pub fn update_game(
         }
     }
     
-    // handle_events(ui, puzzle, state);
+    handle_events(ui, puzzle, state);
 
-    // let swap_indicator_y = game_rect.bottom() + style.scale * 0.15;
-    // for swap_i in 0..puzzle.swap_limit() {
-    //     let filled = swap_i >= puzzle.swaps_made();
-    //     let t = (swap_i as f32 + 0.5) / (puzzle.swap_limit() as f32);
-    //     let center = Pos2::new(game_rect.right() * t + game_rect.left() * (1.0 - t), swap_indicator_y);
-    //     if filled {
-    //         painter.circle_filled(center, style.scale * 0.10, Color::Purple.color32());
-    //     }
-    //     else {
-    //         painter.circle_stroke(center, style.scale * 0.10, (1.0, Color::Purple.color32()));
-    //     }
-    // }
+    let swap_indicator_y = game_rect.bottom() + style.scale * 0.15;
+    for swap_i in 0..puzzle.swap_limit() {
+        let filled = swap_i >= puzzle.swaps_made();
+        let t = (swap_i as f32 + 0.5) / (puzzle.swap_limit() as f32);
+        let center = Pos2::new(game_rect.right() * t + game_rect.left() * (1.0 - t), swap_indicator_y);
+        if filled {
+            painter.circle_filled(center, style.scale * 0.10, Color::SWAP.color32());
+        }
+        else {
+            painter.circle_stroke(center, style.scale * 0.10, (1.0, Color::SWAP.color32()));
+        }
+    }
 
     for (grid_pos, _) in puzzle.iter_cells() {
         let center = to_screen * Pos2 { x: grid_pos.x as f32, y: grid_pos.y as f32 };
