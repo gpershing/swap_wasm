@@ -1,6 +1,6 @@
 use std::iter;
 
-use super::{grid_index::GridIndex, grid_size::GridSize, Direction};
+use super::{grid_index::GridIndex, GridSize, Direction};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -39,7 +39,7 @@ const fn get_index_from_linear_index(size: GridSize, linear_index: usize) -> Gri
 }
 
 impl<T> Grid<T> {
-    pub const fn with_size(size: GridSize) -> Self {
+    pub fn with_size(size: GridSize) -> Self {
         let data = iter::repeat_with(|| None).take(size.width * size.height)
             .collect::<Vec<_>>()
             .into_boxed_slice();
@@ -70,12 +70,12 @@ impl<T> Grid<T> {
         Ok(self.data[li].take())
     }
 
-    pub const fn get(&self, grid_index: GridIndex) -> Option<&T> {
+    pub fn get(&self, grid_index: GridIndex) -> Option<&T> {
         get_linear_index(self.size, grid_index)
             .and_then(|li| self.data[li].as_ref())
     }
 
-    pub const unsafe fn get_unchecked(&self, grid_index: GridIndex) -> Option<&T> {
+    pub unsafe fn get_unchecked(&self, grid_index: GridIndex) -> Option<&T> {
         self.data.get_unchecked(get_linear_index_unchecked(self.size, grid_index))
             .as_ref()
     }
@@ -155,5 +155,44 @@ impl<T> Grid<T> {
 
     pub fn neighbors_mut(&mut self, index: GridIndex) -> impl Iterator<Item = (GridIndex, Direction, &mut T)> {
         self.neighbors_mut_for(index, Direction::ALL.into_iter())
+    }
+}
+
+pub struct GridIter<T> {
+    grid: Grid<T>,
+    index_iter: <GridSize as IntoIterator>::IntoIter
+}
+
+impl<T> Iterator for GridIter<T> {
+    type Item = (GridIndex, T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(index) = self.index_iter.next() {
+                unsafe {
+                    match self.grid.data[get_linear_index_unchecked(self.grid.size, index)].take() {
+                        Some(item) => break Some((index, item)),
+                        None => (),
+                    }
+                }
+            }
+            else {
+                break None
+            }
+        }
+    }
+}
+
+impl<T> IntoIterator for Grid<T> {
+    type Item = (GridIndex, T);
+
+    type IntoIter = GridIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        let size = self.size;
+        GridIter {
+            grid: self,
+            index_iter: size.into_iter()
+        }
     }
 }

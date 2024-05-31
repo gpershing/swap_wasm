@@ -29,7 +29,7 @@ pub struct Cell {
 }
 
 impl Cell {
-    pub const fn new(id: CellId, puzzle_cell: PuzzleCell) -> Self {
+    pub fn new(id: CellId, puzzle_cell: PuzzleCell) -> Self {
         let data = match puzzle_cell {
             PuzzleCell::Normal { connections } => CellData::Normal { layer: CellLayer { connections, fill: ColorSet::empty() }, source: None },
             PuzzleCell::Source { connections, source } => CellData::Normal { layer: CellLayer { connections, fill: ColorSet::singleton(source) }, source: Some(source) },
@@ -50,14 +50,14 @@ impl Cell {
 
     pub const fn get_layer_count(&self) -> usize {
         match &self.data {
-            CellData::Normal { layer, source } => 1,
-            CellData::Intersection { layers } => 2,
+            CellData::Normal { layer: _layer, source: _source } => 1,
+            CellData::Intersection { layers: _layers } => 2,
         }
     }
 
     pub const fn get_layer(&self, layer_idx: usize) -> Option<&CellLayer> {
         match &self.data {
-            CellData::Normal { layer, source } => match layer_idx {
+            CellData::Normal { layer, source: _source } => match layer_idx {
                 0 => Some(layer),
                 _ => None
             },
@@ -69,9 +69,9 @@ impl Cell {
         }
     }
 
-    pub const fn get_layer_mut(&mut self, layer_idx: usize) -> Option<&mut CellLayer> {
+    pub fn get_layer_mut(&mut self, layer_idx: usize) -> Option<&mut CellLayer> {
         match &mut self.data {
-            CellData::Normal { layer, source } => match layer_idx {
+            CellData::Normal { layer, source: _source } => match layer_idx {
                 0 => Some(layer),
                 _ => None
             },
@@ -85,14 +85,14 @@ impl Cell {
 
     pub fn iter_layers(&self) -> impl Iterator<Item = &CellLayer> {
         match &self.data {
-            CellData::Normal { layer, source } => [layer].into_iter(),
-            CellData::Intersection { layers } => layers.iter(),
-        }
+            CellData::Normal { layer, source: _source } => vec![layer],
+            CellData::Intersection { layers } => layers.iter().collect(),
+        }.into_iter()
     }
 
     pub fn get_layer_for_direction(&self, direction: Direction) -> Option<(usize, &CellLayer)> {
         match &self.data {
-            CellData::Normal { layer, source } => if layer.connections.contains(direction) { Some((0, layer)) } else { None },
+            CellData::Normal { layer, source: _source } => if layer.connections.contains(direction) { Some((0, layer)) } else { None },
             CellData::Intersection { layers } => if layers[0].connections.contains(direction) {
                 Some((0, &layers[0]))
             } else if layers[1].connections.contains(direction) {
@@ -105,14 +105,14 @@ impl Cell {
 
     pub const fn source(&self) -> Option<Color> {
         match self.data {
-            CellData::Normal { layer, source } => source,
-            CellData::Intersection { layers } => None,
+            CellData::Normal { layer: _layer, source } => source,
+            CellData::Intersection { layers: _layers } => None,
         }
     }
 
     pub(crate) fn rotate(&mut self, rotation: Rotation) {
         match &mut self.data {
-            CellData::Normal { layer, source } => {
+            CellData::Normal { layer, source: _source } => {
                 layer.connections = layer.connections.rotated(rotation);
             },
             CellData::Intersection { layers } => {

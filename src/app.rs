@@ -11,7 +11,7 @@ pub struct App {
 impl Default for App {
     fn default() -> Self {
         Self {
-            puzzle: PlayingPuzzle::new(Puzzle::debug_default()),
+            puzzle: PlayingPuzzle::play(generate_puzzle(&GeneratorSettings::default())),
             game_state: GameState::new()
         }
     }
@@ -35,7 +35,7 @@ impl App {
 
 impl App {
     pub fn set_puzzle(&mut self, puzzle: Puzzle) {
-        self.puzzle = PlayingPuzzle::new(puzzle);
+        self.puzzle = PlayingPuzzle::play(puzzle);
         self.game_state = GameState::new();
     }
 }
@@ -70,7 +70,6 @@ impl eframe::App for App {
                         self.set_puzzle(generate_puzzle(&GeneratorSettings {
                             red_sources: crate::generator::SourceSettings::Maybe,
                             rotator_sources: crate::generator::SourceSettings::Definitely,
-                            size: crate::grid_math::Vec2 { x: 3, y: 5 },
                             swap_count: 5,
                             ..Default::default()
                         }));

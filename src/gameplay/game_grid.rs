@@ -1,10 +1,10 @@
 use std::collections::VecDeque;
 
-use egui::ahash::{HashMap, HashMapExt, HashSet};
+use egui::ahash::{HashMap, HashMapExt, HashSet, HashSetExt};
 
 use crate::grids::{Grid, GridIndex, Rotation};
 
-use super::{cell::CellLayer, Cell, CellIdProvider, PuzzleCell, SwapRecord};
+use super::{cell::CellLayer, Cell, CellIdProvider, ColorSet, PuzzleCell, SwapRecord};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[derive(serde::Serialize, serde:: Deserialize)]
@@ -81,8 +81,8 @@ impl GameGrid for Grid<Cell> {
             for cell in slf.iter() {
                 if let Some(source) = cell.1.source() {
                     match source_counts.entry(source) {
-                        std::collections::hash_map::Entry::Occupied(entry) => entry.get_mut() += 1,
-                        std::collections::hash_map::Entry::Vacant(entry) => entry.insert(1),
+                        std::collections::hash_map::Entry::Occupied(mut entry) => *entry.get_mut() += 1,
+                        std::collections::hash_map::Entry::Vacant(entry) => { entry.insert(1); },
                     }
                 }
             }
@@ -137,17 +137,17 @@ impl GameGrid for Grid<Cell> {
 
     fn fill(&mut self) {
         self.iter_mut().for_each(|c| c.1.clear_fill());
-        let mut to_explore: VecDeque<_> = self.iter().filter_map(|(grid_index, cell)| {
-            cell.source().map(|source| (GameGridIndex { grid_index, layer_index: 0 }, source))
+        let mut to_explore_queue: VecDeque<_> = self.iter().filter_map(|(grid_index, cell)| {
+            cell.source().map(|source| (GameGridIndex { grid_index, layer_index: 0 }, ColorSet::singleton(source)))
         }).collect();
-        while let Some((to_explore, to_fill)) = to_explore.pop_front() {
+        while let Some((to_explore, to_fill)) = to_explore_queue.pop_front() {
             let cell = self.get_layer_mut(to_explore).unwrap();
             let union = cell.fill.union(to_fill);
             if union != cell.fill {
                 cell.fill = union;
                 for (neighbor, layer) in self.iter_connected_layers(to_explore).unwrap() {
                     if union != layer.fill {
-                        to_explore.push_back((neighbor, union))
+                        to_explore_queue.push_back((neighbor, union))
                     }
                 }
             }
@@ -158,27 +158,29 @@ impl GameGrid for Grid<Cell> {
         self.iter()
             .map(|c| c.1.iter_layers()
                 .enumerate()
-                .map(|(idx, layer)| (GameGridIndex { grid_index: c.0, layer_index: idx })))
+                .map(move |(idx, layer)| (GameGridIndex { grid_index: c.0, layer_index: idx }, layer)))
             .flatten()
     }
 
     fn iter_layers_at(&self, index: GridIndex) -> Option<impl Iterator<Item = (GameGridIndex, &CellLayer)>> {
-        self.get(index).map(|cell|
+        self.get(index).map(move |cell|
             cell.iter_layers()
                 .enumerate()
-                .map(|(idx, layer)| GameGridIndex { grid_index: index, layer_index: idx }))
+                .map(move |(idx, layer)| (GameGridIndex { grid_index: index, layer_index: idx }, layer)))
     }
 
     fn iter_connected_layers(&self, index: GameGridIndex) -> Option<impl Iterator<Item = (GameGridIndex, &CellLayer)>> {
         let layer = self.get_layer(index)?;
-        Some(self.iter_neighbors_for(index, layer.connections.iter_set())
-                    .filter_map(|(_idx, direction, cell)| cell.get_layer_for_direction(direction.inverse())))
+        Some(self.iter_neighbors_for(index.grid_index, layer.connections.iter_set())
+                    .filter_map(|(grid_index, direction, cell)| cell
+                        .get_layer_for_direction(direction.inverse())
+                        .map(|(layer_index, cell)| (GameGridIndex { grid_index, layer_index }, cell))))
     }
 
     fn all_connected(&self, index: GameGridIndex) -> Option<HashSet<GameGridIndex>> {
-        if self.get(index).is_none() { return None }
-        let explored = HashSet::new();
-        let to_explore = Vec::new();
+        if self.get(index.grid_index).is_none() { return None }
+        let mut explored = HashSet::new();
+        let mut to_explore = Vec::new();
         to_explore.push(index);
         while let Some(exploring) = to_explore.pop() {
             explored.insert(exploring);

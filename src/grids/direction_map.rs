@@ -1,6 +1,15 @@
 use std::ops::{Index, IndexMut};
 
-use super::Direction;
+use super::{Direction, Rotation};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct DirectionMapData<T> {
+    pub e: T,
+    pub n: T,
+    pub w: T,
+    pub s: T
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -35,6 +44,11 @@ impl<T> DirectionMap<T> {
         Self { data }
     }
 
+    pub fn new(data: DirectionMapData<T>) -> Self {
+        let d = [data.e, data.n, data.w, data.s];
+        Self { data: d }
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = (Direction, &T)> {
         Direction::ALL.iter().map(|dir| (*dir, &self[dir]))
     }
@@ -44,7 +58,7 @@ impl<T> DirectionMap<T> {
             .map(|(idx, el)| (dir_for_idx(idx), el))
     }
 
-    pub fn map<Other>(&self, f: impl Fn(&T) -> Other) -> DirectionMap<Other> {
+    pub fn map<Other>(self, f: impl FnMut(T) -> Other) -> DirectionMap<Other> {
         DirectionMap {
             data: self.data.map(f)
         }
@@ -55,6 +69,15 @@ impl<T> DirectionMap<T> where T : Copy {
     pub fn new_with_repeat(value: T) -> Self {
         let data = [value; 4];
         Self { data }
+    }
+
+    pub fn rotated(&self, rotation: Rotation) -> Self {
+        match rotation {
+            Rotation::None => self.clone(),
+            Rotation::CCW => Self { data: [self.data[3], self.data[0], self.data[1], self.data[2]] },
+            Rotation::Half => Self { data: [self.data[2], self.data[3], self.data[0], self.data[1]] },
+            Rotation::CW => Self { data: [self.data[1], self.data[2], self.data[3], self.data[0]] },
+        }
     }
 }
 
@@ -87,6 +110,10 @@ impl<T> IndexMut<&Direction> for DirectionMap<T> {
 }
 
 impl DirectionSet {
+    pub fn empty() -> Self {
+        Self::new_with_repeat(false)
+    }
+
     pub fn contains(&self, direction: Direction) -> bool {
         self[direction]
     }

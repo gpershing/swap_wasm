@@ -26,12 +26,12 @@ impl PlayingPuzzle {
         Self { puzzle, grid, history: Vec::new() }
     }
 
-    pub const fn swaps_made(&self) -> usize {
+    pub fn swaps_made(&self) -> usize {
         self.history.len()
     }
 
-    pub const fn swap_limit(&self) -> usize {
-        self.puzzle.swap_limit()
+    pub fn swap_limit(&self) -> usize {
+        self.puzzle.swap_limit() as usize
     }
 
     pub const fn size(&self) -> GridSize {
