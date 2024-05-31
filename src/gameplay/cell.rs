@@ -122,15 +122,17 @@ impl Cell {
         }
     }
 
-    pub(crate) fn rotate_by_fill(&mut self) {
+    pub(crate) fn rotate_by_fill(&mut self) -> Rotation {
         let ccw = self.has_color_in_any_layer(Color::CCW);
         let cw = self.has_color_in_any_layer(Color::CW);
-        self.rotate(match (ccw, cw) {
+        let rotation = match (ccw, cw) {
             (true, true) => Rotation::None,
             (true, false) => Rotation::CCW,
             (false, true) => Rotation::CW,
             (false, false) => Rotation::None,
-        })
+        };
+        self.rotate(rotation);
+        rotation
     }
 
     pub fn set_min_fill(&mut self) {

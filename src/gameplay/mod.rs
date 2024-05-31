@@ -8,7 +8,7 @@ mod game_grid;
 mod playing_puzzle;
 pub use puzzle::{Puzzle, PuzzleCell};
 pub use playing_puzzle::{PlayingPuzzle, PuzzleSolveState};
-pub use game_grid::{GameGrid, puzzle_grid_to_playing_grid, fill_playing_grid, is_solved};
+pub use game_grid::GameGrid;
 pub use cell_id::{CellId, CellIdProvider};
 pub use cell::Cell;
 pub use color::Color;

@@ -2,26 +2,18 @@ use std::collections::VecDeque;
 
 use egui::ahash::{HashMap, HashMapExt, HashSet};
 
-use crate::grids::{Grid, GridIndex};
+use crate::grids::{Grid, GridIndex, Rotation};
 
-use super::{cell::CellLayer, Cell, CellIdProvider, PuzzleCell};
+use super::{cell::CellLayer, Cell, CellIdProvider, PuzzleCell, SwapRecord};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[derive(serde::Serialize, serde:: Deserialize)]
-pub enum PuzzleSolveState {
+pub enum GridSolveState {
     Solved,
-    TooManySwaps,
     NotAllConnected,
     NotAllFilled,
     DoubleFilled,
     DuplicateColorSection
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[derive(serde::Serialize, serde::Deserialize)]
-enum GameGridLayerIndex {
-    Layer0,
-    Layer1
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -34,9 +26,10 @@ pub struct GameGridIndex {
 pub trait GameGrid {
     fn from_puzzle_grid(puzzle_grid: Grid<PuzzleCell>) -> Self;
 
-    fn is_solved(&self) -> PuzzleSolveState;
+    fn is_solved(&self) -> GridSolveState;
 
-    fn swap_with_rotation(&mut self, a: GridIndex, b: GridIndex) -> bool;
+    fn swap_with_rotation(&mut self, a: GridIndex, b: GridIndex) -> Option<SwapRecord>;
+    fn undo_swap(&mut self, record: SwapRecord);
     fn fill(&mut self);
 
     fn get_layer(&self, index: GameGridIndex) -> Option<&CellLayer>;
@@ -72,16 +65,16 @@ impl GameGrid for Grid<Cell> {
         grid
     }
 
-    fn is_solved(&self) -> PuzzleSolveState {
+    fn is_solved(&self) -> GridSolveState {
         let all_connected = self.iter_layers().all(|(index, layer)|
             self.iter_connected_layers(index).unwrap().count() == layer.connections.len());
-        if !all_connected { return PuzzleSolveState::NotAllConnected }
+        if !all_connected { return GridSolveState::NotAllConnected }
 
         let all_filled = self.iter_layers().all(|(index, layer)| !layer.fill.is_empty());
-        if !all_filled { return PuzzleSolveState::NotAllFilled }
+        if !all_filled { return GridSolveState::NotAllFilled }
 
         let double_filled = self.iter_layers().any(|(index, layer)| layer.fill.iter().take(2).count() == 2);
-        if double_filled { return PuzzleSolveState::DoubleFilled }
+        if double_filled { return GridSolveState::DoubleFilled }
 
         fn has_duplicate_fill(slf: &Grid<Cell>) -> bool {
             let mut source_counts = HashMap::new();
@@ -105,9 +98,9 @@ impl GameGrid for Grid<Cell> {
             }
             false
         }
-        if has_duplicate_fill(&self) { return PuzzleSolveState::DuplicateColorSection }
+        if has_duplicate_fill(&self) { return GridSolveState::DuplicateColorSection }
 
-        return PuzzleSolveState::Solved;
+        return GridSolveState::Solved;
     }
 
     fn get_layer(&self, index: GameGridIndex) -> Option<&CellLayer> {
@@ -120,18 +113,26 @@ impl GameGrid for Grid<Cell> {
         cell.get_layer_mut(index.layer_index.into())
     }
 
-    fn swap_with_rotation(&mut self, a: GridIndex, b: GridIndex) -> bool {
+    fn swap_with_rotation(&mut self, a: GridIndex, b: GridIndex) -> Option<SwapRecord> {
         match can_swap(&self, a, b) {
             true => {
+                let a_rotation: Rotation;
+                let b_rotation: Rotation;
                 unsafe {
-                    self.get_unchecked_mut(a).unwrap_unchecked().rotate_by_fill();
-                    self.get_unchecked_mut(b).unwrap_unchecked().rotate_by_fill();
+                    a_rotation = self.get_unchecked_mut(a).unwrap_unchecked().rotate_by_fill();
+                    b_rotation = self.get_unchecked_mut(b).unwrap_unchecked().rotate_by_fill();
                 }
                 self.swap(a, b);
-                true
+                Some(SwapRecord { a, b, a_rotation, b_rotation })
             },
-            false => false,
+            false => None,
         }
+    }
+
+    fn undo_swap(&mut self, record: SwapRecord) {
+        self.swap(record.a, record.b);
+        self.get_mut(record.a).unwrap().rotate(record.a_rotation.inverse());
+        self.get_mut(record.b).unwrap().rotate(record.b_rotation.inverse());
     }
 
     fn fill(&mut self) {
