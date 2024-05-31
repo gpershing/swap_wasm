@@ -38,6 +38,10 @@ impl PlayingPuzzle {
         self.grid.size()
     }
 
+    pub fn index_has_cell(&self, grid_index: GridIndex) -> bool {
+        self.grid.get(grid_index).is_some()
+    }
+
     pub fn iter_cells(&self) -> impl Iterator<Item = (GridIndex, &Cell)> {
         self.grid.iter()
     }
@@ -46,14 +50,14 @@ impl PlayingPuzzle {
         self.grid = Grid::from_puzzle_grid(self.puzzle.start());
     }
 
-    pub fn try_swap(&mut self, a: GridIndex, b: GridIndex) -> Option<SwapRecord> {
+    pub fn try_swap(&mut self, a: GridIndex, b: GridIndex) -> bool {
         if let Some(record) = self.grid.swap_with_rotation(a, b) {
             self.history.push(record);
             self.grid.fill();
-            return Some(record);
+            true
         }
         else {
-            None
+            false
         }
     }
     

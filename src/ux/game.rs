@@ -1,11 +1,11 @@
-use egui::{emath::{self, RectTransform}, Color32, EventFilter, Modifiers, Pos2, Rect, Response, Rounding, Sense, Shape, Stroke, Ui, Vec2};
+use egui::{emath::{self, RectTransform}, Color32, Pos2, Rect, Response, Rounding, Sense, Shape, Stroke, Ui, Vec2};
 
-use crate::{gameplay::{CellId, Color, PlayingPuzzle}, grids::Direction};
+use crate::{gameplay::PlayingPuzzle, grids::{Direction, GridIndex}};
 
 pub struct GameState {
     input: GameInput,
-    highlight: Option<CellId>,
-    selected: Option<CellId>
+    highlight: Option<GridIndex>,
+    selected: Option<GridIndex>
 }
 
 impl GameState {
@@ -13,9 +13,9 @@ impl GameState {
         GameState { input: GameInput::None, selected: None, highlight: None }
     }
 
-    pub fn is_dragging(&self, id: CellId) -> bool {
+    pub fn is_dragging(&self, index: GridIndex) -> bool {
         match self.input {
-            GameInput::Drag(Some(drag)) => drag == id,
+            GameInput::Drag(Some(drag)) => drag == index,
             GameInput::None => false,
             GameInput::Drag(None) => false,
             GameInput::Down(_) => false,
@@ -31,8 +31,8 @@ pub struct GameStyle {
 #[derive(Debug, Clone, Copy)]
 enum GameInput {
     None,
-    Down(Option<CellId>),
-    Drag(Option<CellId>),
+    Down(Option<GridIndex>),
+    Drag(Option<GridIndex>),
 }
 
 impl GameInput {
@@ -53,55 +53,55 @@ impl Default for GameInput {
 
 enum GameInputResponse {
     None,
-    Down(Option<CellId>),
-    Up(Option<CellId>),
-    Drag(Option<CellId>),
-    Drop(Option<CellId>, Option<CellId>),
+    Down(Option<GridIndex>),
+    Up(Option<GridIndex>),
+    Drag(Option<GridIndex>),
+    Drop(Option<GridIndex>, Option<GridIndex>),
 }
 
-// fn update_input(input: &mut GameInput, ui: &Ui, response: Response, puzzle: &PlayingPuzzle, to_game_coords: &RectTransform) -> GameInputResponse {
-//     fn get_input_id(ui: &Ui, puzzle: &PlayingPuzzle, to_game_coords: &RectTransform) -> Option<CellId> {
-//         ui.ctx().pointer_interact_pos().and_then(|pos| {
-//             let game_coord_f = to_game_coords * pos;
-//             let game_coord = grid_math::Pos2::new(game_coord_f.x.round() as i8, game_coord_f.y.round() as i8);
-//             puzzle.id_for_position(game_coord)
-//         })
-//     }
+fn update_input(input: &mut GameInput, ui: &Ui, response: Response, puzzle: &PlayingPuzzle, to_game_coords: &RectTransform) -> GameInputResponse {
+    fn get_grid_pos(ui: &Ui, puzzle: &PlayingPuzzle, to_game_coords: &RectTransform) -> Option<GridIndex> {
+        ui.ctx().pointer_interact_pos().and_then(|pos| {
+            let game_coord_f = to_game_coords * pos;
+            let game_coord = GridIndex::new(game_coord_f.x.round() as usize, game_coord_f.y.round() as usize);
+            puzzle.index_has_cell(game_coord).then_some(game_coord)
+        })
+    }
 
-//     if response.clicked() {
-//         *input = GameInput::None;
-//         return GameInputResponse::Up(get_input_id(ui, puzzle, to_game_coords))
-//     }
+    if response.clicked() {
+        *input = GameInput::None;
+        return GameInputResponse::Up(get_grid_pos(ui, puzzle, to_game_coords))
+    }
 
-//     if response.drag_stopped() {
-//         let dragging = match input {
-//             GameInput::None => None,
-//             GameInput::Down(_) => None,
-//             GameInput::Drag(id) => *id
-//         };
-//         *input = GameInput::None;
-//         return GameInputResponse::Drop(dragging, get_input_id(ui, puzzle, to_game_coords));
-//     }
+    if response.drag_stopped() {
+        let dragging = match input {
+            GameInput::None => None,
+            GameInput::Down(_) => None,
+            GameInput::Drag(id) => *id
+        };
+        *input = GameInput::None;
+        return GameInputResponse::Drop(dragging, get_grid_pos(ui, puzzle, to_game_coords));
+    }
 
-//     if response.drag_started() {
-//         let input_id = get_input_id(ui, puzzle, to_game_coords);
-//         *input = GameInput::Drag(input_id);
-//         return GameInputResponse::Drag(input_id);
-//     }
+    if response.drag_started() {
+        let input_id = get_grid_pos(ui, puzzle, to_game_coords);
+        *input = GameInput::Drag(input_id);
+        return GameInputResponse::Drag(input_id);
+    }
 
-//     if input.is_none() {
-//         let down = response.contains_pointer() && ui.ctx().input(|i| i.pointer.primary_down());
-//         if down {
-//             *input = GameInput::Down(get_input_id(ui, puzzle, to_game_coords));
-//             return GameInputResponse::Down(get_input_id(ui, puzzle, to_game_coords));
-//         }
-//         else {
-//             *input = GameInput::None;
-//         }
-//     }
-//     return GameInputResponse::None;
+    if input.is_none() {
+        let down = response.contains_pointer() && ui.ctx().input(|i| i.pointer.primary_down());
+        if down {
+            *input = GameInput::Down(get_grid_pos(ui, puzzle, to_game_coords));
+            return GameInputResponse::Down(get_grid_pos(ui, puzzle, to_game_coords));
+        }
+        else {
+            *input = GameInput::None;
+        }
+    }
+    return GameInputResponse::None;
     
-// }
+}
 
 // pub fn handle_events(ui: &Ui, puzzle: &mut PlayingPuzzle, state: &mut GameState) {
 //     let events = ui.input(|i| i.filtered_events(&EventFilter::default()));
@@ -135,39 +135,39 @@ pub fn update_game(
     let to_screen = emath::RectTransform::from_to(game_coords, game_rect);
     let to_game_coords = to_screen.inverse();
 
-    // let swap_action = match update_input(&mut state.input, ui, response, puzzle, &to_game_coords) {
-    //     GameInputResponse::None => None,
-    //     GameInputResponse::Down(id) => {
-    //         state.highlight = id;
-    //         None
-    //     },
-    //     GameInputResponse::Up(id) => {
-    //         state.highlight = None;
-    //         match state.selected.take() {
-    //             Some(prev) => id.map(|id| (prev, id)),
-    //             None => {
-    //                 state.selected = id;
-    //                 None
-    //             },
-    //         }
-    //     },
-    //     GameInputResponse::Drag(id) => {
-    //         state.highlight = id;
-    //         state.selected = None;
-    //         None
-    //     },
-    //     GameInputResponse::Drop(prev, id) => {
-    //         state.highlight = None;
-    //         state.selected = None;
-    //         prev.and_then(|prev| id.map(|id| (prev, id)))
-    //     },
-    // };
+    let swap_action = match update_input(&mut state.input, ui, response, puzzle, &to_game_coords) {
+        GameInputResponse::None => None,
+        GameInputResponse::Down(id) => {
+            state.highlight = id;
+            None
+        },
+        GameInputResponse::Up(id) => {
+            state.highlight = None;
+            match state.selected.take() {
+                Some(prev) => id.map(|id| (prev, id)),
+                None => {
+                    state.selected = id;
+                    None
+                },
+            }
+        },
+        GameInputResponse::Drag(id) => {
+            state.highlight = id;
+            state.selected = None;
+            None
+        },
+        GameInputResponse::Drop(prev, id) => {
+            state.highlight = None;
+            state.selected = None;
+            prev.and_then(|prev| id.map(|id| (prev, id)))
+        },
+    };
 
-    // if let Some((id_a, id_b)) = swap_action {
-    //     if puzzle.try_swap(id_a, id_b) {
-    //         println!("{:?}", puzzle.is_solved());
-    //     }
-    // }
+    if let Some((a, b)) = swap_action {
+        if puzzle.try_swap(a, b) {
+            println!("{:?}", puzzle.is_solved());
+        }
+    }
     
     // handle_events(ui, puzzle, state);
 
@@ -192,11 +192,11 @@ pub fn update_game(
     }
 
     for (grid_pos, cell) in puzzle.iter_cells() {
-        let center = if state.is_dragging(cell.id()) {
+        let center = if state.is_dragging(grid_pos) {
             ui.ctx().pointer_interact_pos().unwrap_or(Pos2::ZERO)
         }
         else { to_screen * Pos2 { x: grid_pos.x as f32, y: grid_pos.y as f32 } };
-        let size = if Some(cell.id()) == state.selected || Some(cell.id()) == state.highlight { style.scale * 0.9 } else { style.scale };
+        let size = if Some(grid_pos) == state.selected || Some(grid_pos) == state.highlight { style.scale * 0.9 } else { style.scale };
         if cell.get_layer_count() == 2 {
             for layer in cell.iter_layers() {
                 let connections_vec: Vec<_> = layer.connections.iter_set().collect();
