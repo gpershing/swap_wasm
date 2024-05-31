@@ -65,8 +65,10 @@ pub fn generate_puzzle(settings: &GeneratorSettings) -> Puzzle {
 
     let mut grid = Grid::with_size(GridSize::new(3, 3));
     grid.insert(GridIndex::new(0, 0), PuzzleCell::Normal { connections: DirectionSet::new(DirectionMapData { e: true, n: true, ..Default::default() }) });
-    grid.insert(GridIndex::new(1, 1), PuzzleCell::Source { connections: DirectionSet::new(DirectionMapData { w: true, n: true, ..Default::default() }), source: Color::Purple });
-    grid.insert(GridIndex::new(2, 2), PuzzleCell::Intersection { connections: DirectionMap::new(DirectionMapData { e: LayerConnection::Layer0, n: LayerConnection::Layer0, w: LayerConnection::Layer1, s: LayerConnection::Layer1 }) });
+    grid.insert(GridIndex::new(2, 2), PuzzleCell::Source { connections: DirectionSet::new(DirectionMapData { w: true, n: true, ..Default::default() }), source: Color::Purple });
+    grid.insert(GridIndex::new(0, 2), PuzzleCell::Intersection { connections: DirectionMap::new(DirectionMapData { e: LayerConnection::Layer0, n: LayerConnection::Layer1, w: LayerConnection::Layer1, s: LayerConnection::Layer1 }) });
+    grid.insert(GridIndex::new(1, 2), PuzzleCell::Intersection { connections: DirectionMap::new(DirectionMapData { e: LayerConnection::Layer0, n: LayerConnection::Layer1, w: LayerConnection::Layer0, s: LayerConnection::Layer1 }) });
+    grid.insert(GridIndex::new(1, 1), PuzzleCell::Intersection { connections: DirectionMap::new(DirectionMapData { e: LayerConnection::Layer0, n: LayerConnection::Layer0, w: LayerConnection::Layer1, s: LayerConnection::Layer1 }) });
     let puzzle = Puzzle::new(grid, 4);
 
     puzzle
@@ -74,7 +76,7 @@ pub fn generate_puzzle(settings: &GeneratorSettings) -> Puzzle {
 
 // fn create_puzzle_from_grid(game_grid: GameGrid, swaps: u8) -> Puzzle {
 //     let mut grid = Grid::new();
-//     for (pos, cell) in game_grid.iter() {
+//     for (pos, cell) in game_grid.iter() {nuy]
 //         grid.insert(*pos, PuzzleCell::new(cell.connections(), cell.source()));
 //     }
 //     Puzzle::new(grid, swaps)

@@ -1,3 +1,5 @@
+use egui::Vec2;
+
 use super::Rotation;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -38,6 +40,15 @@ impl Direction {
             (Direction::S, Rotation::CCW) => Direction::E,
             (Direction::S, Rotation::Half) => Direction::N,
             (Direction::S, Rotation::CW) => Direction::W,
+        }
+    }
+
+    pub const fn to_vec(self) -> Vec2 {
+        match self {
+            Direction::E => Vec2 { x: 1.0, y: 0.0 },
+            Direction::N => Vec2 { x: 0.0, y: -1.0 },
+            Direction::W => Vec2 { x: -1.0, y: 0.0 },
+            Direction::S => Vec2 { x: 0.0, y: 1.0 },
         }
     }
 }

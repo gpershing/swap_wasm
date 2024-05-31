@@ -1,6 +1,6 @@
 use egui::{emath::{self, RectTransform}, Color32, EventFilter, Modifiers, Pos2, Rect, Response, Rounding, Sense, Shape, Stroke, Ui, Vec2};
 
-use crate::gameplay::{CellId, Color, PlayingPuzzle};
+use crate::{gameplay::{CellId, Color, PlayingPuzzle}, grids::Direction};
 
 pub struct GameState {
     input: GameInput,
@@ -126,12 +126,12 @@ pub fn update_game(
     style: &GameStyle) {
     let bounds = puzzle.size();
     let margin: egui::Margin = ui.style().spacing.window_margin;
-    let game_size = Vec2::new(bounds.width as f32, bounds.height as f32)  * style.scale;
+    let game_size = Vec2::new(bounds.width as f32, bounds.height as f32) * style.scale;
     let game_size_with_margins = game_size + margin.sum();
     let (response, painter) = ui.allocate_painter(game_size_with_margins, Sense::click_and_drag());
 
     let game_rect = Rect::from_center_size(painter.clip_rect().center(), game_size);
-    let game_coords = Rect::from_min_size(Pos2::new(-0.5, -0.5), game_size);
+    let game_coords = Rect::from_min_size(Pos2::new(-0.5, -0.5), Vec2 { x: bounds.width as f32, y: bounds.height as f32 });
     let to_screen = emath::RectTransform::from_to(game_coords, game_rect);
     let to_game_coords = to_screen.inverse();
 
@@ -184,29 +184,52 @@ pub fn update_game(
     //     }
     // }
 
-    // for (grid_pos, _) in puzzle.iter_cells() {
-    //     let center = to_screen * grid_pos.to_posf();
-    //     painter.rect(
-    //         Rect::from_center_size(center, Vec2::splat(style.scale * 0.95)),
-    //         Rounding::same(style.scale * 0.05), Color32::GRAY, Stroke::NONE);
-    // }
+    for (grid_pos, _) in puzzle.iter_cells() {
+        let center = to_screen * Pos2 { x: grid_pos.x as f32, y: grid_pos.y as f32 };
+        painter.rect(
+            Rect::from_center_size(center, Vec2::splat(style.scale * 0.95)),
+            Rounding::same(style.scale * 0.05), Color32::GRAY, Stroke::NONE);
+    }
 
-    // for (grid_pos, cell) in puzzle.iter_cells() {
-    //     let center = if state.is_dragging(cell.id()) {
-    //         ui.ctx().pointer_interact_pos().unwrap_or(Pos2::ZERO)
-    //     }
-    //     else { to_screen * grid_pos.to_posf() };
-    //     let size = if Some(cell.id()) == state.selected || Some(cell.id()) == state.highlight { style.scale * 0.9 } else { style.scale };
-    //     painter.extend(cell.connections().iter().map(|d| Shape::line_segment(
-    //         [center, center + d.to_vecf() * 0.5 * size],
-    //         Stroke::new(
-    //             1.0,
-    //             cell.fill().iter().next().map(|c| c.color32()).unwrap_or(Color32::WHITE)
-    //         ))));
-    //     if let Some(source) = cell.source() {
-    //         painter.circle_stroke(center, style.scale * 0.2, Stroke::new(1.0, source.color32()));
-    //     }
-    // }
+    for (grid_pos, cell) in puzzle.iter_cells() {
+        let center = if state.is_dragging(cell.id()) {
+            ui.ctx().pointer_interact_pos().unwrap_or(Pos2::ZERO)
+        }
+        else { to_screen * Pos2 { x: grid_pos.x as f32, y: grid_pos.y as f32 } };
+        let size = if Some(cell.id()) == state.selected || Some(cell.id()) == state.highlight { style.scale * 0.9 } else { style.scale };
+        if cell.get_layer_count() == 2 {
+            for layer in cell.iter_layers() {
+                let connections_vec: Vec<_> = layer.connections.iter_set().collect();
+                let stroke = Stroke::new(
+                    1.0,
+                    layer.fill.iter().next().map(|c| c.color32()).unwrap_or(Color32::WHITE)
+                    );
+                let effective_center = if connections_vec.len() == 2 && connections_vec[0] == connections_vec[1].inverse() {
+                    match connections_vec[0] {
+                        Direction::E | Direction::W => center + Vec2 { x: 0.0, y: -0.1 } * size,
+                        Direction::N | Direction::S => center + Vec2 { x: -0.1, y: 0.0 } * size,
+                    }
+                }
+                else {
+                    connections_vec.iter().fold(center, |fc, dir| fc + dir.to_vec() * 0.1 * style.scale)
+                };
+                painter.extend(connections_vec.iter().map(|dir|
+                    Shape::line_segment([effective_center, center + dir.to_vec() * 0.5 * size], stroke)));
+            }
+        }
+        else {
+            let layer = cell.get_layer(0).unwrap();
+            painter.extend(layer.connections.iter_set().map(|d| Shape::line_segment(
+                [center, center + d.to_vec() * 0.5 * size],
+                Stroke::new(
+                    1.0,
+                    layer.fill.iter().next().map(|c| c.color32()).unwrap_or(Color32::WHITE)
+                ))));
+        }
+        if let Some(source) = cell.source() {
+            painter.circle_stroke(center, style.scale * 0.2, Stroke::new(1.0, source.color32()));
+        }
+    }
 }
 
 // impl Default for Game {
