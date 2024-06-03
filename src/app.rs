@@ -1,4 +1,4 @@
-use crate::{gameplay::{PlayingPuzzle, Puzzle}, generator::{generate_puzzle, GeneratorSettings}, ux::{update_game, GameState, GameStyle}};
+use crate::{gameplay::{PlayingPuzzle, Puzzle}, generator::{generate_puzzle, GeneratorSettings}, grids::GridSize, ux::{update_game, GameState, GameStyle}};
 
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
@@ -68,9 +68,13 @@ impl eframe::App for App {
                 ui.menu_button("DEBUG", |ui| {
                     if ui.button("Reset").clicked() {
                         self.set_puzzle(generate_puzzle(&GeneratorSettings {
-                            red_sources: crate::generator::SourceSettings::Maybe,
+                            stop_sources: crate::generator::SourceSettings::Maybe,
                             rotator_sources: crate::generator::SourceSettings::Definitely,
-                            swap_count: 5,
+                            size: GridSize { width: 5, height: 5 },
+                            swap_count: 4,
+                            max_intersections: 5,
+                            intersection_chance: 0.25,
+                            knockout_loop_chance: 0.9,
                             ..Default::default()
                         }));
                     }

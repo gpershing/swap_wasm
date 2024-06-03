@@ -2,10 +2,10 @@ use crate::grids::{DirectionMap, DirectionSet, Grid};
 
 use super::Color;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[derive(serde::Serialize, serde:: Deserialize)]
 pub enum LayerConnection {
-    None,
+    #[default] None,
     Layer0,
     Layer1
 }

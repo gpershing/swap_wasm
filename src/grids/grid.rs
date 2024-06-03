@@ -6,7 +6,8 @@ use super::{grid_index::GridIndex, GridSize, Direction};
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct Grid<T> {
     data: Box<[Option<T>]>,
-    size: GridSize
+    size: GridSize,
+    filled: usize,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -43,7 +44,7 @@ impl<T> Grid<T> {
         let data = iter::repeat_with(|| None).take(size.width * size.height)
             .collect::<Vec<_>>()
             .into_boxed_slice();
-        Self { data, size }
+        Self { data, filled: 0, size }
     }
 
     pub const fn size(&self) -> GridSize {
@@ -58,16 +59,27 @@ impl<T> Grid<T> {
         self.size.height
     }
 
+    pub const fn len(&self) -> usize {
+        self.filled
+    }
+
     pub fn insert(&mut self, grid_index: GridIndex, value: T) -> Result<Option<T>, IndexOutOfSize> {
         let li = get_linear_index(self.size, grid_index).ok_or(IndexOutOfSize)?;
         let previous = self.data[li].take();
         self.data[li] = Some(value);
+        if previous.is_none() { self.filled += 1 };
         Ok(previous)
     }
 
     pub fn remove(&mut self, grid_index: GridIndex) -> Result<Option<T>, IndexOutOfSize> {
         let li = get_linear_index(self.size, grid_index).ok_or(IndexOutOfSize)?;
-        Ok(self.data[li].take())
+        let previous = self.data[li].take();
+        if previous.is_some() { self.filled -= 1 };
+        Ok(previous)
+    }
+
+    pub fn contains(&self, grid_index: GridIndex) -> bool {
+        self.get(grid_index).is_some()
     }
 
     pub fn get(&self, grid_index: GridIndex) -> Option<&T> {

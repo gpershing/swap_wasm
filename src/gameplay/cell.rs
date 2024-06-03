@@ -1,4 +1,4 @@
-use crate::grids::{Direction, DirectionSet, Rotation};
+use crate::grids::{Direction, DirectionMap, DirectionSet, Rotation};
 
 use super::{cell_id::CellId, puzzle::{LayerConnection, PuzzleCell}, Color, ColorSet};
 
@@ -41,6 +41,25 @@ impl Cell {
         Self {
             id,
             data
+        }
+    }
+
+    pub fn to_puzzle_cell(self) -> PuzzleCell {
+        match self.data {
+            CellData::Normal { layer, source } => match source {
+                Some(source) => PuzzleCell::Source { connections: layer.connections, source },
+                None => PuzzleCell::Normal { connections: layer.connections },
+            },
+            CellData::Intersection { layers } => {
+                let mut connections = DirectionMap::default();
+                for dir in layers[0].connections.iter_set() {
+                    connections[dir] = LayerConnection::Layer0;
+                }
+                for dir in layers[1].connections.iter_set() {
+                    connections[dir] = LayerConnection::Layer1;
+                }
+                PuzzleCell::Intersection { connections }
+            },
         }
     }
 
@@ -122,15 +141,19 @@ impl Cell {
         }
     }
 
-    pub(crate) fn rotate_by_fill(&mut self) -> Rotation {
+    pub fn rotation_for_fill(&self) -> Rotation {
         let ccw = self.has_color_in_any_layer(Color::CCW);
         let cw = self.has_color_in_any_layer(Color::CW);
-        let rotation = match (ccw, cw) {
+        match (ccw, cw) {
             (true, true) => Rotation::None,
             (true, false) => Rotation::CCW,
             (false, true) => Rotation::CW,
             (false, false) => Rotation::None,
-        };
+        }
+    }
+
+    pub(crate) fn rotate_by_fill(&mut self) -> Rotation {
+        let rotation = self.rotation_for_fill();
         self.rotate(rotation);
         rotation
     }
