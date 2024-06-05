@@ -134,6 +134,10 @@ impl DirectionSet {
         self.iter_set().count()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.iter_set().next().is_none()
+    }
+
     pub fn iter_set(&self) -> impl Iterator<Item = Direction> + '_ {
         Direction::ALL.into_iter().filter(|d| self[d])
     }

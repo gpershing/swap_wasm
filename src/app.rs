@@ -1,18 +1,21 @@
-use crate::{gameplay::{PlayingPuzzle, Puzzle}, generator::{generate_puzzle, GeneratorSettings}, grids::GridSize, ux::{update_game, GameState, GameStyle}};
+use crate::{gameplay::{PlayingPuzzle, Puzzle}, generator::{generate_puzzle, GeneratorSettings}, grids::GridSize, ux::{update_game, GameState, GameStyle, SegmentMeshData}};
 
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct App {
     puzzle: PlayingPuzzle,
     #[serde(skip)]
-    game_state: GameState
+    game_state: GameState,
+    #[serde(skip)]
+    mesh_data: SegmentMeshData
 }
 
 impl Default for App {
     fn default() -> Self {
         Self {
-            puzzle: PlayingPuzzle::play(generate_puzzle(&GeneratorSettings::default())),
-            game_state: GameState::new()
+            puzzle: PlayingPuzzle::play(crate::gameplay::debug_puzzle::debug_puzzle()), // generate_puzzle(&GeneratorSettings::default())),
+            game_state: GameState::new(),
+            mesh_data: SegmentMeshData::init(0.03, 0.01)
         }
     }
 }
@@ -67,16 +70,17 @@ impl eframe::App for App {
                 }
                 ui.menu_button("DEBUG", |ui| {
                     if ui.button("Reset").clicked() {
-                        self.set_puzzle(generate_puzzle(&GeneratorSettings {
-                            stop_sources: crate::generator::SourceSettings::Maybe,
-                            rotator_sources: crate::generator::SourceSettings::Definitely,
-                            size: GridSize { width: 5, height: 5 },
-                            swap_count: 4,
-                            max_intersections: 5,
-                            intersection_chance: 0.25,
-                            knockout_loop_chance: 0.9,
-                            ..Default::default()
-                        }));
+                        // self.set_puzzle(generate_puzzle(&GeneratorSettings {
+                        //     stop_sources: crate::generator::SourceSettings::Maybe,
+                        //     rotator_sources: crate::generator::SourceSettings::Definitely,
+                        //     size: GridSize { width: 5, height: 5 },
+                        //     swap_count: 4,
+                        //     max_intersections: 5,
+                        //     intersection_chance: 0.25,
+                        //     knockout_loop_chance: 0.9,
+                        //     ..Default::default()
+                        // }));
+                        self.set_puzzle(crate::gameplay::debug_puzzle::debug_puzzle())
                     }
                 });
 
@@ -90,8 +94,8 @@ impl eframe::App for App {
 
             ui.centered_and_justified(|ui| {
                 update_game(ui, &mut self.puzzle, &mut self.game_state, &GameStyle {
-                    scale: 50.0
-                });
+                    scale: 150.0
+                }, &self.mesh_data);
             });
             // self.game.ui(ui);
 
