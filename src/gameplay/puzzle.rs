@@ -25,6 +25,35 @@ pub enum PuzzleCell {
     }
 }
 
+impl PuzzleCell {
+    pub const fn source(&self) -> Option<Color> {
+        match self {
+            PuzzleCell::Normal { connections } => None,
+            PuzzleCell::Source { connections, source } => Some(*source),
+            PuzzleCell::Intersection { connections } => None,
+        }
+    }
+
+    pub fn iter_layers(&self) -> impl Iterator<Item = DirectionSet> {
+        match self {
+            PuzzleCell::Normal { connections } => [Some(*connections), None],
+            PuzzleCell::Source { connections, source: _source } => [Some(*connections), None],
+            PuzzleCell::Intersection { connections } => {
+                [Some(connections.map(|c| c == LayerConnection::Layer0)),
+                Some(connections.map(|c| c == LayerConnection::Layer1))]
+            }
+        }.into_iter().filter_map(std::convert::identity)
+    }
+
+    pub fn total_connections(&self) -> usize {
+        match self {
+            PuzzleCell::Normal { connections } => connections.len(),
+            PuzzleCell::Source { connections, source: _source } => connections.len(),
+            PuzzleCell::Intersection { connections } => connections.iter().filter(|c| *c.1 != LayerConnection::None).count(),
+        }
+    }
+}
+
 #[derive(serde::Serialize, serde:: Deserialize)]
 pub struct Puzzle {
     grid: Grid<PuzzleCell>,

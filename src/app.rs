@@ -3,6 +3,7 @@ use crate::{gameplay::{PlayingPuzzle, Puzzle}, generator::{generate_puzzle, Gene
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct App {
+    #[serde(skip)]
     puzzle: PlayingPuzzle,
     #[serde(skip)]
     game_state: GameState,
@@ -12,9 +13,12 @@ pub struct App {
 
 impl Default for App {
     fn default() -> Self {
+        let puzzle = crate::gameplay::debug_puzzle::debug_puzzle(); // generate_puzzle(&GeneratorSettings::default())
+        let game_state = GameState::new(&puzzle);
+        let playing_puzzle = PlayingPuzzle::play(puzzle);
         Self {
-            puzzle: PlayingPuzzle::play(crate::gameplay::debug_puzzle::debug_puzzle()), // generate_puzzle(&GeneratorSettings::default())),
-            game_state: GameState::new(),
+            puzzle: playing_puzzle,
+            game_state,
             mesh_data: SegmentMeshData::init(0.03, 0.01)
         }
     }
@@ -38,8 +42,8 @@ impl App {
 
 impl App {
     pub fn set_puzzle(&mut self, puzzle: Puzzle) {
+        self.game_state = GameState::new(&puzzle);
         self.puzzle = PlayingPuzzle::play(puzzle);
-        self.game_state = GameState::new();
     }
 }
 
@@ -80,7 +84,7 @@ impl eframe::App for App {
                         //     knockout_loop_chance: 0.9,
                         //     ..Default::default()
                         // }));
-                        self.set_puzzle(crate::gameplay::debug_puzzle::debug_puzzle())
+                        self.set_puzzle(crate::gameplay::debug_puzzle::test_puzzle())
                     }
                 });
 

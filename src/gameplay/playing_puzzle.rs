@@ -26,6 +26,10 @@ impl PlayingPuzzle {
         Self { puzzle, grid, history: Vec::new() }
     }
 
+    pub const fn grid(&self) -> &Grid<Cell> {
+        &self.grid
+    }
+
     pub fn swaps_made(&self) -> usize {
         self.history.len()
     }
@@ -50,25 +54,25 @@ impl PlayingPuzzle {
         self.grid = Grid::from_puzzle_grid(self.puzzle.start());
     }
 
-    pub fn try_swap(&mut self, a: GridIndex, b: GridIndex) -> bool {
+    pub fn try_swap(&mut self, a: GridIndex, b: GridIndex) -> Option<SwapRecord> {
         if let Some(record) = self.grid.swap_with_rotation(a, b) {
             self.history.push(record);
             self.grid.fill();
-            true
+            Some(record)
         }
         else {
-            false
+            None
         }
     }
     
-    pub fn try_undo(&mut self) -> bool {
+    pub fn try_undo(&mut self) -> Option<SwapRecord> {
         if let Some(record) = self.history.pop() {
             self.grid.undo_swap(record);
             self.grid.fill();
-            true
+            Some(record)
         }
         else {
-            false
+            None
         }
     }
 

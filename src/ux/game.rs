@@ -1,18 +1,29 @@
 use egui::{emath::{self, RectTransform}, Color32, EventFilter, Modifiers, Pos2, Rect, Response, Rounding, Sense, Shape, Stroke, Ui, Vec2};
 
-use crate::{gameplay::{Color, PlayingPuzzle}, grids::{Direction, GridIndex}};
+use crate::{gameplay::{Color, PlayingPuzzle, Puzzle, SwapRecord}, grids::{Direction, GridIndex}};
 
-use super::{cell::{draw_cell, CellDrawData}, SegmentMeshData};
+use super::{cell::{draw_cell, CellDrawData}, simulation::Simulation, SegmentMeshData};
 
 pub struct GameState {
+    input: GameInputState,
+    simulation: Simulation
+}
+
+impl GameState {
+    pub fn new(puzzle: &Puzzle) -> Self {
+        Self { input: GameInputState::new(), simulation: Simulation::new(puzzle) }
+    }
+}
+
+pub struct GameInputState {
     input: GameInput,
     highlight: Option<GridIndex>,
     selected: Option<GridIndex>
 }
 
-impl GameState {
-    pub fn new() -> GameState {
-        GameState { input: GameInput::None, selected: None, highlight: None }
+impl GameInputState {
+    pub fn new() -> Self {
+        Self { input: GameInput::None, selected: None, highlight: None }
     }
 
     pub fn is_dragging(&self, index: GridIndex) -> bool {
@@ -22,6 +33,12 @@ impl GameState {
             GameInput::Drag(None) => false,
             GameInput::Down(_) => false,
         }
+    }
+
+    pub fn clear(&mut self) {
+        self.highlight = None;
+        self.selected = None;
+        self.input = GameInput::None;
     }
 }
 
@@ -117,7 +134,11 @@ pub fn handle_events(ui: &Ui, puzzle: &mut PlayingPuzzle, state: &mut GameState)
         _ => false
     });
     if did_undo {
-        let success = puzzle.try_undo();
+        if let Some(record) = puzzle.try_undo() {
+            state.simulation.swap(SwapRecord { a: record.a, b: record.b, a_rotation: record.b_rotation.inverse(), b_rotation: record.a_rotation.inverse() });
+            state.simulation.update_fill(puzzle.grid());
+            state.input.clear();
+        }
     }
 }
 
@@ -127,6 +148,8 @@ pub fn update_game(
     state: &mut GameState,
     style: &GameStyle,
     mesh_data: &SegmentMeshData) {
+    ui.ctx().request_repaint();
+
     let bounds = puzzle.size();
     let margin: egui::Margin = ui.style().spacing.window_margin;
     let game_size = Vec2::new(bounds.width as f32, bounds.height as f32) * style.scale;
@@ -138,41 +161,45 @@ pub fn update_game(
     let to_screen = emath::RectTransform::from_to(game_coords, game_rect);
     let to_game_coords = to_screen.inverse();
 
-    let swap_action = match update_input(&mut state.input, ui, response, puzzle, &to_game_coords) {
+    let swap_action = match update_input(&mut state.input.input, ui, response, puzzle, &to_game_coords) {
         GameInputResponse::None => None,
         GameInputResponse::Down(id) => {
-            state.highlight = id;
+            state.input.highlight = id;
             None
         },
         GameInputResponse::Up(id) => {
-            state.highlight = None;
-            match state.selected.take() {
+            state.input.highlight = None;
+            match state.input.selected.take() {
                 Some(prev) => id.map(|id| (prev, id)),
                 None => {
-                    state.selected = id;
+                    state.input.selected = id;
                     None
                 },
             }
         },
         GameInputResponse::Drag(id) => {
-            state.highlight = id;
-            state.selected = None;
+            state.input.highlight = id;
+            state.input.selected = None;
             None
         },
         GameInputResponse::Drop(prev, id) => {
-            state.highlight = None;
-            state.selected = None;
+            state.input.highlight = None;
+            state.input.selected = None;
             prev.and_then(|prev| id.map(|id| (prev, id)))
         },
     };
 
     if let Some((a, b)) = swap_action {
-        if puzzle.try_swap(a, b) {
+        if let Some(record) = puzzle.try_swap(a, b) {
+            state.simulation.swap(record);
+            state.simulation.update_fill(puzzle.grid());
             println!("{:?}", puzzle.is_solved());
         }
     }
     
     handle_events(ui, puzzle, state);
+
+    state.simulation.step(0.01);
 
     let swap_indicator_y = game_rect.bottom() + style.scale * 0.15;
     for swap_i in 0..puzzle.swap_limit() {
@@ -195,15 +222,17 @@ pub fn update_game(
     }
 
     for (grid_pos, cell) in puzzle.iter_cells() {
-        let center = if state.is_dragging(grid_pos) {
+        let center = if state.input.is_dragging(grid_pos) {
             ui.ctx().pointer_interact_pos().unwrap_or(Pos2::ZERO)
         }
         else { to_screen * Pos2 { x: grid_pos.x as f32, y: grid_pos.y as f32 } };
-        let size = if Some(grid_pos) == state.selected || Some(grid_pos) == state.highlight { style.scale * 0.85 } else { style.scale };
+        let size = if Some(grid_pos) == state.input.selected || Some(grid_pos) == state.input.highlight { style.scale * 0.85 } else { style.scale };
         draw_cell(cell, &painter, CellDrawData {
+            index: grid_pos,
             center,
             size,
-            mesh_data
+            mesh_data,
+            simulation: &state.simulation
         });
         // if cell.get_layer_count() == 2 {
         //     for layer in cell.iter_layers() {

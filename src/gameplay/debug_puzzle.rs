@@ -20,6 +20,17 @@ fn ldirs(e: usize, n: usize, w: usize, s: usize) -> DirectionMap<LayerConnection
     map
 }
 
+pub fn test_puzzle() -> Puzzle {
+    let mut grid = Grid::with_size(GridSize { width: 1, height: 4 });
+
+    grid.insert(GridIndex::new(0, 0), PuzzleCell::Normal { connections: dirs(false, true, false, false) } );
+    grid.insert(GridIndex::new(0, 3), PuzzleCell::Source { connections: dirs(false, false, false, true), source: Color::Purple } );
+    grid.insert(GridIndex::new(0, 1), PuzzleCell::Normal { connections: dirs(false, true, false, true) });
+    grid.insert(GridIndex::new(0, 2), PuzzleCell::Normal { connections: dirs(false, true, false, true) });
+
+    Puzzle::new(grid, 4)
+}
+
 pub fn debug_puzzle() -> Puzzle {
     let mut grid = Grid::with_size(GridSize { width: 10, height: 6 });
 
