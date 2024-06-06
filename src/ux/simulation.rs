@@ -2,8 +2,6 @@ use egui::{ahash::{HashMap, HashMapExt}, Color32};
 
 use crate::{gameplay::{Cell, Color, FColor, Puzzle, SwapRecord}, grids::{Direction, Grid, GridIndex, Rotation}};
 
-use super::segment;
-
 #[derive(Debug, Clone, Copy)]
 pub struct SimulationSegment {
     start_index: usize,
@@ -27,21 +25,20 @@ pub struct Simulation {
     segments: HashMap<(GridIndex, Direction), SimulationSegment>,
 
     simulated_cell_count: usize,
-    void_index: usize,
-    color_index_start: usize,
+    void_index: usize
 }
 
 impl Simulation {
-    const SEGMENT_LENGTH: usize = 10;
-    const ALPHA: f32 = 0.9;
-    const SOURCE: f32 = 1.2;
-    const RETAIN_LOSS: f32 = 0.99;
+    const SEGMENT_LENGTH: usize = 6;
+    const ALPHA: f32 = 0.15;
+    const SOURCE: f32 = 3.0;
+    const RETAIN_LOSS: f32 = 0.995;
     pub const DT: f32 = 0.003;
 
     pub fn new(puzzle: &Puzzle) -> Self {
         let grid = puzzle.start();
 
-        let segment_count: usize = grid.iter().filter(|(_, cell)| cell.source().is_none()).map(|(_, cell)| cell.total_connections()).sum();
+        let segment_count: usize = grid.iter().map(|(_, cell)| cell.total_connections()).sum();
         let simulated_cell_count: usize = segment_count * Self::SEGMENT_LENGTH;
         let void_index: usize = simulated_cell_count;
         let color_index_start = void_index + 1;
@@ -57,23 +54,28 @@ impl Simulation {
         let mut at = 0;
         let mut inner_connections = Vec::new();
         for (index, cell) in grid {
-            if let Some(source) = cell.source() {
-                for direction in cell.iter_layers().next().unwrap().iter_set() {
-                    segments.insert((index, direction), SimulationSegment {
-                        start_index: color_index_start + source.index(),
-                        end_index: color_index_start + source.index() + 1
-                    });
-                }
-            }
-            else {
-                for layer in cell.iter_layers() {
-                    for direction in layer.iter_set() {
-                        let start_index = at;
-                        let end_index = at + Self::SEGMENT_LENGTH;
-                        at = end_index;
+            for layer in cell.iter_layers() {
+                for direction in layer.iter_set() {
+                    let start_index = at;
+                    let end_index = at + Self::SEGMENT_LENGTH;
+                    at = end_index;
 
-                        segments.insert((index, direction), SimulationSegment { start_index, end_index });
+                    segments.insert((index, direction), SimulationSegment { start_index, end_index });
 
+                    for i in start_index..(end_index-1) {
+                        cells[i].next = i + 1;
+                    }
+                    cells[end_index - 1].next = end_index - 1;
+                    
+                    cells[start_index].previous = void_index;
+                    for i in (start_index+1)..end_index {
+                        cells[i].previous = i - 1;
+                    }
+
+                    if let Some(source) = cell.source() {
+                        cells[end_index - 1].next = color_index_start + source.index();
+                    }
+                    else {
                         let mut check_direction = direction;
                         for _ in 0..3 {
                             check_direction = check_direction.rotated(Rotation::CCW);
@@ -81,16 +83,6 @@ impl Simulation {
                                 inner_connections.push((index, direction, check_direction));
                                 break;
                             }
-                        }
-
-                        for i in start_index..(end_index-1) {
-                            cells[i].next = i + 1;
-                        }
-                        cells[end_index - 1].next = end_index - 1;
-                        
-                        cells[start_index].previous = void_index;
-                        for i in (start_index+1)..end_index {
-                            cells[i].previous = i - 1;
                         }
                     }
                 }
@@ -117,7 +109,7 @@ impl Simulation {
             current_colors[index] = color.fcolor();
         }
 
-        Self { t: 0.0, indices: cells, current, next, retain, current_colors, segments, simulated_cell_count, void_index, color_index_start }
+        Self { t: 0.0, indices: cells, current, next, retain, current_colors, segments, simulated_cell_count, void_index }
     }
 
     pub fn update_fill(&mut self, grid: &Grid<Cell>) {
@@ -158,7 +150,8 @@ impl Simulation {
                 let sum_inv = 1.0 / sum;
                 let mut next_color = FColor::rgb(0.0, 0.0, 0.0);
                 for color in Color::ALL {
-                    next_color += color.fcolor() * self.next[index][color.index()].min(1.0) * self.next[index][color.index()] * sum_inv;
+                    let t = self.next[index][color.index()].min(1.0);
+                    next_color += color.fcolor() * (t * (2.0 - t)) * self.next[index][color.index()] * sum_inv;
                 }
                 self.current_colors[index] = next_color;
             }
@@ -166,21 +159,30 @@ impl Simulation {
         std::mem::swap(&mut self.current, &mut self.next);
     }
 
+    // prev
+    // first = 3
+    // end = 6
+    // [] 3 4 5 []
+    //   0 1 2 3
+    // proj_float in [0.5, 3.5]
+    // proj_floor in { 0, 1, 2, 3 }
+    // index_t in [0, 1)
     pub fn lerp(&self, first: usize, end: usize, t: f32) -> Color32 {
-        let last = end - 1;
-        let index_float = (last - first) as f32 * t + first as f32;
-        let index_floor = index_float.floor();
-        let index_t = index_float - index_floor;
-        let index = index_floor as usize;
-        if index >= last {
-            self.current_colors[last]
-        }
-        else if index_t <= 0.001 {
-            self.current_colors[index]
-        }
-        else {
-            self.current_colors[index] * (1.0 - index_t) + self.current_colors[index + 1] * index_t
-        }.to_color32()
+        let length = end - first;
+        let proj_float = t * (length as f32) + 0.5;
+        let proj_floor = proj_float.floor();
+        let index_t = proj_float - proj_floor;
+        let proj_index = proj_floor as usize;
+
+        let (a, b) = if proj_index == 0 {
+            (self.indices[first].previous, first)
+        } else if proj_index >= length {
+            (end - 1, self.indices[end - 1].next)
+        } else {
+            (first + proj_index - 1, first + proj_index)
+        };
+
+        (self.current_colors[a] * (1.0 - index_t) + self.current_colors[b] * index_t).to_color32()
     }
 
     fn break_neighbor_connection_from(&mut self, index: GridIndex, direction: Direction) {

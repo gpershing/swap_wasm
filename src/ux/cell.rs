@@ -65,14 +65,8 @@ fn draw_simple(layer: &CellLayer, source: Option<Color>, painter: &Painter, data
             x: (point.x * cos - point.y * sin) * data.size + data.center.x,
             y: (point.x * -sin - point.y * cos) * data.size + data.center.y
         };
-        if let Some(source) = source {
-            painter.add(Shape::Mesh(data.mesh_data.c0.get_mesh(t_default, |_| source.color32())));
-            painter.add(Shape::Mesh(data.mesh_data.c0.get_mesh(t_mirror, |_| source.color32())));
-        }
-        else {
-            painter.add(Shape::Mesh(data.mesh_data.c0.get_mesh(t_default, data.simulation.color_fn_single((data.index, connections[0])))));
-            painter.add(Shape::Mesh(data.mesh_data.c0.get_mesh(t_mirror, data.simulation.color_fn_single((data.index, connections[0])))));
-        }
+        painter.add(Shape::Mesh(data.mesh_data.c0.get_mesh(t_default, data.simulation.color_fn_single((data.index, connections[0])))));
+        painter.add(Shape::Mesh(data.mesh_data.c0.get_mesh(t_mirror, data.simulation.color_fn_single((data.index, connections[0])))));
     }
     else if connections.len() == 2 {
         if connections[0] == connections[1].inverse() {
@@ -89,15 +83,9 @@ fn draw_simple(layer: &CellLayer, source: Option<Color>, painter: &Painter, data
                 x: (point.x * cos - point.y * sin) * data.size + data.center.x,
                 y: (point.x * -sin - point.y * cos) * data.size + data.center.y
             };
-            if let Some(source) = source {
-                painter.add(Shape::Mesh(data.mesh_data.h0.get_mesh(t_default, |_| source.color32())));
-                painter.add(Shape::Mesh(data.mesh_data.h0.get_mesh(t_mirror, |_| source.color32())));
-            }
-            else {
-                let (dir1, dir2) = if ew { (Direction::E, Direction::W) } else { (Direction::N, Direction::S) };
-                painter.add(Shape::Mesh(data.mesh_data.h0.get_mesh(t_default, data.simulation.color_fn_through_two((data.index, dir1), (data.index, dir2)))));
-                painter.add(Shape::Mesh(data.mesh_data.h0.get_mesh(t_mirror, data.simulation.color_fn_through_two((data.index, dir1), (data.index, dir2)))));
-            }
+            let (dir1, dir2) = if ew { (Direction::E, Direction::W) } else { (Direction::N, Direction::S) };
+            painter.add(Shape::Mesh(data.mesh_data.h0.get_mesh(t_default, data.simulation.color_fn_through_two((data.index, dir1), (data.index, dir2)))));
+            painter.add(Shape::Mesh(data.mesh_data.h0.get_mesh(t_mirror, data.simulation.color_fn_through_two((data.index, dir1), (data.index, dir2)))));
         }
         else {
             let e = connections[0] == Direction::E || connections[1] == Direction::E;
@@ -120,14 +108,8 @@ fn draw_simple(layer: &CellLayer, source: Option<Color>, painter: &Painter, data
                 x: (point.x * cos + point.y * sin) * data.size + data.center.x,
                 y: (point.x * -sin + point.y * cos) * data.size + data.center.y
             };
-            if let Some(source) = source {
-                painter.add(Shape::Mesh(data.mesh_data.l0.get_mesh(t_default, |_| source.color32())));
-                painter.add(Shape::Mesh(data.mesh_data.l1.get_mesh(t_default, |_| source.color32())));
-            }
-            else {
-                painter.add(Shape::Mesh(data.mesh_data.l0.get_mesh(t_default, data.simulation.color_fn_through_two((data.index, dir1), (data.index, dir2)))));
-                painter.add(Shape::Mesh(data.mesh_data.l1.get_mesh(t_default, data.simulation.color_fn_through_two((data.index, dir1), (data.index, dir2)))));
-            }
+            painter.add(Shape::Mesh(data.mesh_data.l0.get_mesh(t_default, data.simulation.color_fn_through_two((data.index, dir1), (data.index, dir2)))));
+            painter.add(Shape::Mesh(data.mesh_data.l1.get_mesh(t_default, data.simulation.color_fn_through_two((data.index, dir1), (data.index, dir2)))));
         }
     }
     else if connections.len() == 3 {
@@ -154,16 +136,9 @@ fn draw_simple(layer: &CellLayer, source: Option<Color>, painter: &Painter, data
             x: (-point.x * cos + point.y * sin) * data.size + data.center.x,
             y: (-point.x * -sin + point.y * cos) * data.size + data.center.y
         };
-        if let Some(source) = source {
-            painter.add(Shape::Mesh(data.mesh_data.l0.get_mesh(t_default, |_| source.color32())));
-            painter.add(Shape::Mesh(data.mesh_data.l0.get_mesh(t_rotate, |_| source.color32())));
-            painter.add(Shape::Mesh(data.mesh_data.t0.get_mesh(t_default, |_| source.color32())));
-        }
-        else {
-            painter.add(Shape::Mesh(data.mesh_data.l0.get_mesh(t_default, data.simulation.color_fn_through_two((data.index, dir3), (data.index, dir2)) )));
-            painter.add(Shape::Mesh(data.mesh_data.l0.get_mesh(t_rotate, data.simulation.color_fn_through_two((data.index, dir1), (data.index, dir2)) )));
-            painter.add(Shape::Mesh(data.mesh_data.t0.get_mesh(t_default, data.simulation.color_fn_through_two((data.index, dir3), (data.index, dir1)) )));
-        }
+        painter.add(Shape::Mesh(data.mesh_data.l0.get_mesh(t_default, data.simulation.color_fn_through_two((data.index, dir3), (data.index, dir2)) )));
+        painter.add(Shape::Mesh(data.mesh_data.l0.get_mesh(t_rotate, data.simulation.color_fn_through_two((data.index, dir1), (data.index, dir2)) )));
+        painter.add(Shape::Mesh(data.mesh_data.t0.get_mesh(t_default, data.simulation.color_fn_through_two((data.index, dir3), (data.index, dir1)) )));
     }
     else {
         let rotation: f32 = 0.0;
@@ -174,12 +149,7 @@ fn draw_simple(layer: &CellLayer, source: Option<Color>, painter: &Painter, data
                 x: (point.x * cos + point.y * sin) * data.size + data.center.x,
                 y: (point.x * -sin + point.y * cos) * data.size + data.center.y
             };
-            if let Some(source) = source {
-                painter.add(Shape::Mesh(data.mesh_data.l0.get_mesh(transform, |_| source.color32())));
-            }
-            else {
-                painter.add(Shape::Mesh(data.mesh_data.l0.get_mesh(transform, data.simulation.color_fn_through_two((data.index, direction), (data.index, direction.rotated(crate::grids::Rotation::CCW))) )));
-            }
+            painter.add(Shape::Mesh(data.mesh_data.l0.get_mesh(transform, data.simulation.color_fn_through_two((data.index, direction), (data.index, direction.rotated(crate::grids::Rotation::CCW))) )));
             std::mem::swap(&mut cos, &mut sin);
             sin = -sin;
         }
