@@ -1,17 +1,18 @@
 use egui::{emath::{self, RectTransform}, Color32, EventFilter, Modifiers, Pos2, Rect, Response, Rounding, Sense, Shape, Stroke, Ui, Vec2};
 
-use crate::{gameplay::{Color, PlayingPuzzle, Puzzle, SwapRecord}, grids::{Direction, GridIndex}};
+use crate::{gameplay::{Cell, Color, PlayingPuzzle, Puzzle, SwapRecord}, grids::{Direction, Grid, GridIndex}};
 
-use super::{cell::{draw_cell, CellDrawData}, simulation::Simulation, SegmentMeshData};
+use super::{background::BackgroundAnimation, cell::{draw_cell, CellDrawData}, simulation::Simulation, SegmentMeshData};
 
 pub struct GameState {
     input: GameInputState,
-    simulation: Simulation
+    simulation: Simulation,
+    backgound_animation: BackgroundAnimation
 }
 
 impl GameState {
-    pub fn new(puzzle: &Puzzle) -> Self {
-        Self { input: GameInputState::new(), simulation: Simulation::new(puzzle) }
+    pub fn new(grid: &Grid<Cell>) -> Self {
+        Self { input: GameInputState::new(), simulation: Simulation::new(grid), backgound_animation: BackgroundAnimation::new(grid) }
     }
 }
 
@@ -150,6 +151,8 @@ pub fn update_game(
     mesh_data: &SegmentMeshData) {
     ui.ctx().request_repaint();
 
+    let dt = ui.input(|i| i.stable_dt);
+
     let bounds = puzzle.size();
     let margin: egui::Margin = ui.style().spacing.window_margin;
     let game_size = Vec2::new(bounds.width as f32, bounds.height as f32) * style.scale;
@@ -199,7 +202,7 @@ pub fn update_game(
     
     handle_events(ui, puzzle, state);
 
-    state.simulation.step(0.01);
+    state.simulation.step(dt);
 
     let swap_indicator_y = game_rect.bottom() + style.scale * 0.15;
     for swap_i in 0..puzzle.swap_limit() {
@@ -214,11 +217,9 @@ pub fn update_game(
         }
     }
 
-    for (grid_pos, _) in puzzle.iter_cells() {
+    for (grid_pos, cell) in puzzle.iter_cells() {
         let center = to_screen * Pos2 { x: grid_pos.x as f32, y: grid_pos.y as f32 };
-        painter.rect(
-            Rect::from_center_size(center, Vec2::splat(style.scale * 0.95)),
-            Rounding::same(style.scale * 0.05), Color32::GRAY, Stroke::NONE);
+        state.backgound_animation.draw_background_cell(&painter, grid_pos, cell, center, style.scale, dt);
     }
 
     for (grid_pos, cell) in puzzle.iter_cells() {

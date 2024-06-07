@@ -67,6 +67,13 @@ impl Cell {
         self.id
     }
 
+    pub fn total_connections(&self) -> usize {
+        match self.data {
+            CellData::Normal { layer, source } => layer.connections.len(),
+            CellData::Intersection { layers } => layers[0].connections.len() + layers[1].connections.len(),
+        }
+    }
+
     pub const fn get_layer_count(&self) -> usize {
         match &self.data {
             CellData::Normal { layer: _layer, source: _source } => 1,
@@ -185,9 +192,9 @@ impl Cell {
         }
     }
 
-    fn has_color_in_any_layer(&self, color: Color) -> bool {
+    pub fn has_color_in_any_layer(&self, color: Color) -> bool {
         match self.data {
-            CellData::Normal { layer, source } => {
+            CellData::Normal { layer, source: _source } => {
                 layer.fill.contains(color)
             },
             CellData::Intersection { layers } => {

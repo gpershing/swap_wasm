@@ -14,6 +14,10 @@ impl FColor {
         Color32::from_rgb(self.r() as u8, self.g() as u8, self.b() as u8)
     }
 
+    pub fn to_color32_with_alpha(self, alpha: u8) -> Color32 {
+        Color32::from_rgba_unmultiplied(self.r() as u8, self.g() as u8, self.b() as u8, alpha)
+    }
+
     pub fn r(&self) -> f32 { self.0[0].clamp(0.0, 255.0) }
     pub fn g(&self) -> f32 { self.0[1].clamp(0.0, 255.0) }
     pub fn b(&self) -> f32 { self.0[2].clamp(0.0, 255.0) }

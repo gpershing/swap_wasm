@@ -14,8 +14,8 @@ pub struct App {
 impl Default for App {
     fn default() -> Self {
         let puzzle = crate::gameplay::debug_puzzle::debug_puzzle(); // generate_puzzle(&GeneratorSettings::default())
-        let game_state = GameState::new(&puzzle);
         let playing_puzzle = PlayingPuzzle::play(puzzle);
+        let game_state = GameState::new(&playing_puzzle.grid());
         Self {
             puzzle: playing_puzzle,
             game_state,
@@ -42,8 +42,8 @@ impl App {
 
 impl App {
     pub fn set_puzzle(&mut self, puzzle: Puzzle) {
-        self.game_state = GameState::new(&puzzle);
         self.puzzle = PlayingPuzzle::play(puzzle);
+        self.game_state = GameState::new(self.puzzle.grid());
     }
 }
 

@@ -1,6 +1,6 @@
 use egui::{ahash::{HashMap, HashMapExt}, Color32};
 
-use crate::{gameplay::{Cell, Color, FColor, Puzzle, SwapRecord}, grids::{Direction, Grid, GridIndex, Rotation}};
+use crate::{gameplay::{Cell, Color, FColor, SwapRecord}, grids::{Direction, Grid, GridIndex, Rotation}};
 
 #[derive(Debug, Clone, Copy)]
 pub struct SimulationSegment {
@@ -35,9 +35,7 @@ impl Simulation {
     const RETAIN_LOSS: f32 = 0.995;
     pub const DT: f32 = 0.003;
 
-    pub fn new(puzzle: &Puzzle) -> Self {
-        let grid = puzzle.start();
-
+    pub fn new(grid: &Grid<Cell>) -> Self {
         let segment_count: usize = grid.iter().map(|(_, cell)| cell.total_connections()).sum();
         let simulated_cell_count: usize = segment_count * Self::SEGMENT_LENGTH;
         let void_index: usize = simulated_cell_count;
@@ -53,9 +51,9 @@ impl Simulation {
 
         let mut at = 0;
         let mut inner_connections = Vec::new();
-        for (index, cell) in grid {
+        for (index, cell) in grid.iter() {
             for layer in cell.iter_layers() {
-                for direction in layer.iter_set() {
+                for direction in layer.connections.iter_set() {
                     let start_index = at;
                     let end_index = at + Self::SEGMENT_LENGTH;
                     at = end_index;
@@ -79,7 +77,7 @@ impl Simulation {
                         let mut check_direction = direction;
                         for _ in 0..3 {
                             check_direction = check_direction.rotated(Rotation::CCW);
-                            if layer.contains(check_direction) {
+                            if layer.connections.contains(check_direction) {
                                 inner_connections.push((index, direction, check_direction));
                                 break;
                             }
