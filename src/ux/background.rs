@@ -22,7 +22,7 @@ impl BackgroundAnimation {
     const SWAP_GLOW_LOSS: f32 = 2.0;
     const STOP_GLOW_LOSS: f32 = 2.0;
     const ROTATION_GLOW_LOSS: f32 = 2.0;
-    const ROTATION_SPEED: f32 = 0.67;
+    const ROTATION_SPEED: f32 = 0.3;
 
     pub fn new(grid: &Grid<Cell>) -> Self {
         let data = grid.iter()
@@ -45,7 +45,7 @@ impl BackgroundAnimation {
         else {
             (data.stop_glow - dt * Self::STOP_GLOW_LOSS).max(0.0)
         };
-        let rotation = cell.rotation_for_fill();
+        let rotation = if stop { Rotation::None } else { cell.rotation_for_fill() };
         data.rotation_glow = if rotation != Rotation::None {
             (data.rotation_glow + dt).min(1.0)
         }
@@ -91,19 +91,25 @@ impl BackgroundAnimation {
 
         let mut stroke_color = FColor::rgb(0.0, 0.0, 0.0);
         let mut alpha = 0.0;
-        let glow_sum = data.swap_glow + data.stop_glow;
-        if glow_sum > 0.001 {
-            stroke_color = (Color::SWAP.fcolor() * data.swap_glow + Color::STOP.fcolor() * data.stop_glow) * (1.0 / glow_sum);
-            alpha = (100.0 * data.swap_glow + 100.0 * data.stop_glow) / glow_sum;
+        if data.swap_glow > 0.001 {
+            stroke_color = Color::SWAP.fcolor() * data.swap_glow;
+            alpha = 100.0 * data.swap_glow;
         }
         let stroke_color = stroke_color.to_color32_with_alpha(alpha as u8);
 
         painter.rect(
             Rect::from_center_size(center, Vec2::splat(scale * 0.95)),
-            Rounding::same(scale * 0.05), Color32::GRAY, Stroke::new(glow_sum * scale * 0.02, stroke_color));
+            Rounding::same(scale * 0.05), Color32::GRAY, Stroke::new(data.swap_glow * scale * 0.02, stroke_color));
         
+        if data.stop_glow > 0.001 {
+            painter.rect_stroke(
+                Rect::from_center_size(center, Vec2::splat(scale * 0.9)),
+                Rounding::same(scale * 0.05),
+                Stroke::new(data.stop_glow * scale * 0.03, Color::STOP.color32()));
+        };
+
         if data.rotation_glow > 0.001 {
-            let dot_count: usize = 6;
+            let dot_count: usize = 3;
             let dot_angle_range: f32 = TAU / (dot_count as f32);
 
             let color = data.last_rotation_color.unwrap_or(Color::CCW).color32().linear_multiply(0.33 * data.rotation_glow * data.rotation_glow);

@@ -1,4 +1,4 @@
-use crate::grids::{DirectionMap, DirectionSet, Grid};
+use crate::grids::{Direction, DirectionMap, DirectionSet, Grid, GridIndex, GridSize};
 
 use super::Color;
 
@@ -72,4 +72,15 @@ impl Puzzle {
     pub fn start(&self) -> Grid<PuzzleCell> {
         self.grid.clone()
     }
+}
+
+pub fn fallback_puzzle() -> Puzzle {
+    let mut grid = Grid::with_size(GridSize { width: 2, height: 1});
+    grid.insert(GridIndex { x: 0, y: 0 }, PuzzleCell::Source {
+        connections: DirectionSet::from_iter([Direction::W].into_iter()),
+        source: Color::SWAP }).unwrap();
+    grid.insert(GridIndex { x: 1, y: 0 }, PuzzleCell::Normal {
+        connections: DirectionSet::from_iter([Direction::E].into_iter()) })
+        .unwrap();
+    Puzzle { grid, swaps: 1 }
 }

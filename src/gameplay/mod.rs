@@ -8,7 +8,7 @@ mod game_grid;
 mod playing_puzzle;
 pub mod debug_puzzle;
 mod fcolor;
-pub use puzzle::{Puzzle, PuzzleCell, LayerConnection};
+pub use puzzle::{Puzzle, PuzzleCell, LayerConnection, fallback_puzzle};
 pub use playing_puzzle::{PlayingPuzzle, PuzzleSolveState};
 pub use game_grid::{GameGrid, GameGridIndex, GridSolveState};
 pub use cell_id::{CellId, CellIdProvider};

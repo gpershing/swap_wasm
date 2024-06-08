@@ -114,6 +114,14 @@ impl DirectionSet {
         Self::new_with_repeat(false)
     }
 
+    pub fn from_iter(iter: impl Iterator<Item = Direction>) -> Self {
+        let mut set = Self::empty();
+        for dir in iter {
+            set.insert(dir);
+        }
+        set
+    }
+
     pub fn contains(&self, direction: Direction) -> bool {
         self[direction]
     }

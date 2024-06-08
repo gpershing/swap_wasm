@@ -149,9 +149,9 @@ fn draw_simple(layer: &CellLayer, source: Option<Color>, painter: &Painter, data
                 x: (point.x * cos + point.y * sin) * data.size + data.center.x,
                 y: (point.x * -sin + point.y * cos) * data.size + data.center.y
             };
-            painter.add(Shape::Mesh(data.mesh_data.l0.get_mesh(transform, data.simulation.color_fn_through_two((data.index, direction), (data.index, direction.rotated(crate::grids::Rotation::CCW))) )));
+            painter.add(Shape::Mesh(data.mesh_data.l0.get_mesh(transform, data.simulation.color_fn_through_two((data.index, direction), (data.index, direction.rotated(crate::grids::Rotation::CW))) )));
             std::mem::swap(&mut cos, &mut sin);
-            sin = -sin;
+            cos = -cos;
         }
     }
 }

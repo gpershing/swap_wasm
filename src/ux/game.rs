@@ -1,18 +1,24 @@
 use egui::{emath::{self, RectTransform}, Color32, EventFilter, Modifiers, Pos2, Rect, Response, Rounding, Sense, Shape, Stroke, Ui, Vec2};
 
-use crate::{gameplay::{Cell, Color, PlayingPuzzle, Puzzle, SwapRecord}, grids::{Direction, Grid, GridIndex}};
+use crate::{gameplay::{Cell, Color, GameGrid, PlayingPuzzle, Puzzle, PuzzleSolveState, SwapRecord}, grids::{Direction, Grid, GridIndex}};
 
 use super::{background::BackgroundAnimation, cell::{draw_cell, CellDrawData}, simulation::Simulation, SegmentMeshData};
 
 pub struct GameState {
     input: GameInputState,
+    solved: PuzzleSolveState,
     simulation: Simulation,
     backgound_animation: BackgroundAnimation
 }
 
 impl GameState {
-    pub fn new(grid: &Grid<Cell>) -> Self {
-        Self { input: GameInputState::new(), simulation: Simulation::new(grid), backgound_animation: BackgroundAnimation::new(grid) }
+    pub fn new(puzzle: &PlayingPuzzle) -> Self {
+        Self {
+            input: GameInputState::new(),
+            solved: puzzle.is_solved(),
+            simulation: Simulation::new(puzzle.grid()),
+            backgound_animation: BackgroundAnimation::new(puzzle.grid())
+        }
     }
 }
 
@@ -139,6 +145,7 @@ pub fn handle_events(ui: &Ui, puzzle: &mut PlayingPuzzle, state: &mut GameState)
             state.simulation.swap(SwapRecord { a: record.a, b: record.b, a_rotation: record.b_rotation.inverse(), b_rotation: record.a_rotation.inverse() });
             state.simulation.update_fill(puzzle.grid());
             state.input.clear();
+            state.solved = puzzle.is_solved();
         }
     }
 }
@@ -196,13 +203,16 @@ pub fn update_game(
         if let Some(record) = puzzle.try_swap(a, b) {
             state.simulation.swap(record);
             state.simulation.update_fill(puzzle.grid());
-            println!("{:?}", puzzle.is_solved());
+            state.solved = puzzle.is_solved();
         }
     }
     
     handle_events(ui, puzzle, state);
 
     state.simulation.step(dt);
+    if state.solved == PuzzleSolveState::Solved {
+        state.simulation.step_solved(dt, puzzle.grid());
+    }
 
     let swap_indicator_y = game_rect.bottom() + style.scale * 0.15;
     for swap_i in 0..puzzle.swap_limit() {

@@ -33,6 +33,7 @@ impl Simulation {
     const ALPHA: f32 = 0.15;
     const SOURCE: f32 = 3.0;
     const RETAIN_LOSS: f32 = 0.995;
+    const SOLVED_GAIN: f32 = 0.1;
     pub const DT: f32 = 0.003;
 
     pub fn new(grid: &Grid<Cell>) -> Self {
@@ -155,6 +156,22 @@ impl Simulation {
             }
         }
         std::mem::swap(&mut self.current, &mut self.next);
+    }
+
+    pub fn step_solved(&mut self, dt: f32, grid: &Grid<Cell>) {
+        for (index, cell) in grid.iter() {
+            for layer in cell.iter_layers() {
+                for direction in layer.connections.iter_set() {
+                    if let Some(fill_color) = layer.fill.iter().next() {
+                        if let Some(segment) = self.segments.get(&(index, direction)) {
+                            for i in segment.start_index..segment.end_index {
+                                self.current[i][fill_color.index()] = (self.current[i][fill_color.index()] + dt * Self::SOLVED_GAIN).min(Self::SOURCE);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // prev

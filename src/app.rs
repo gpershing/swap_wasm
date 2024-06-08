@@ -1,28 +1,12 @@
-use crate::{gameplay::{PlayingPuzzle, Puzzle}, generator::{generate_puzzle, GeneratorSettings}, grids::GridSize, ux::{update_game, GameState, GameStyle, SegmentMeshData}};
+use crate::{gameplay::{fallback_puzzle, PlayingPuzzle, Puzzle}, generator::{generate_puzzle, GeneratorSettings}, grids::GridSize, ux::{update_game, GameState, GameStyle, SegmentMeshData}};
 
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct App {
-    #[serde(skip)]
     puzzle: PlayingPuzzle,
-    #[serde(skip)]
     game_state: GameState,
-    #[serde(skip)]
     mesh_data: SegmentMeshData
 }
 
-impl Default for App {
-    fn default() -> Self {
-        let puzzle = crate::gameplay::debug_puzzle::debug_puzzle(); // generate_puzzle(&GeneratorSettings::default())
-        let playing_puzzle = PlayingPuzzle::play(puzzle);
-        let game_state = GameState::new(&playing_puzzle.grid());
-        Self {
-            puzzle: playing_puzzle,
-            game_state,
-            mesh_data: SegmentMeshData::init(0.03, 0.01)
-        }
-    }
-}
+const PUZZLE_KEY: &'static str = "swap_puzzle";
 
 impl App {
     /// Called once before the first frame.
@@ -32,25 +16,30 @@ impl App {
 
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
-        if let Some(storage) = cc.storage {
-            return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
-        }
+        let puzzle = cc.storage
+            .and_then(|storage| eframe::get_value(storage, &PUZZLE_KEY))
+            .unwrap_or_else(|| PlayingPuzzle::play(fallback_puzzle()));
+        let game_state = GameState::new(&puzzle);
 
-        Default::default()
+        Self {
+            puzzle,
+            game_state,
+            mesh_data: SegmentMeshData::init(0.03, 0.01)
+        }
     }
 }
 
 impl App {
     pub fn set_puzzle(&mut self, puzzle: Puzzle) {
         self.puzzle = PlayingPuzzle::play(puzzle);
-        self.game_state = GameState::new(self.puzzle.grid());
+        self.game_state = GameState::new(&self.puzzle);
     }
 }
 
 impl eframe::App for App {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        eframe::set_value(storage, eframe::APP_KEY, self);
+        eframe::set_value(storage, PUZZLE_KEY, &self.puzzle);
     }
 
     /// Called each time the UI needs repainting, which may be many times per second.
@@ -73,18 +62,20 @@ impl eframe::App for App {
                     ui.add_space(16.0);
                 }
                 ui.menu_button("DEBUG", |ui| {
-                    if ui.button("Reset").clicked() {
-                        // self.set_puzzle(generate_puzzle(&GeneratorSettings {
-                        //     stop_sources: crate::generator::SourceSettings::Maybe,
-                        //     rotator_sources: crate::generator::SourceSettings::Definitely,
-                        //     size: GridSize { width: 5, height: 5 },
-                        //     swap_count: 4,
-                        //     max_intersections: 5,
-                        //     intersection_chance: 0.25,
-                        //     knockout_loop_chance: 0.9,
-                        //     ..Default::default()
-                        // }));
-                        self.set_puzzle(crate::gameplay::debug_puzzle::test_puzzle())
+                    if ui.button("Generate").clicked() {
+                        self.set_puzzle(generate_puzzle(&GeneratorSettings {
+                            stop_sources: crate::generator::SourceSettings::Maybe,
+                            rotator_sources: crate::generator::SourceSettings::Definitely,
+                            size: GridSize { width: 5, height: 5 },
+                            swap_count: 1,
+                            max_intersections: 5,
+                            intersection_chance: 0.25,
+                            knockout_loop_chance: 0.9,
+                            ..Default::default()
+                        }));
+                    }
+                    if ui.button("Debug").clicked() {
+                        self.set_puzzle(crate::gameplay::debug_puzzle::debug_puzzle());
                     }
                 });
 
