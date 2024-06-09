@@ -117,7 +117,7 @@ impl BackgroundAnimation {
                 let theta = dot_angle_range * (i as f32 + data.rotation_t);
                 let cos = theta.cos();
                 let sin = theta.sin();
-                let radius = f32::powf(cos.abs().powi(6) + sin.abs().powi(6), -0.16666666) * scale * 0.45;
+                let radius = f32::powf(cos.abs().powi(6) + sin.abs().powi(6), -0.16666666) * scale * 0.35;
                 painter.circle_filled(center + Vec2::angled(theta) * radius, scale * 0.02, color);
             }
         }

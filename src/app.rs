@@ -66,8 +66,8 @@ impl eframe::App for App {
                         self.set_puzzle(generate_puzzle(&GeneratorSettings {
                             stop_sources: crate::generator::SourceSettings::Maybe,
                             rotator_sources: crate::generator::SourceSettings::Definitely,
-                            size: GridSize { width: 5, height: 5 },
-                            swap_count: 1,
+                            size: GridSize { width: 4, height: 4 },
+                            swap_count: 4,
                             max_intersections: 5,
                             intersection_chance: 0.25,
                             knockout_loop_chance: 0.9,

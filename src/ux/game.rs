@@ -8,7 +8,8 @@ pub struct GameState {
     input: GameInputState,
     solved: PuzzleSolveState,
     simulation: Simulation,
-    backgound_animation: BackgroundAnimation
+    backgound_animation: BackgroundAnimation,
+    animation_time: f32,
 }
 
 impl GameState {
@@ -17,7 +18,8 @@ impl GameState {
             input: GameInputState::new(),
             solved: puzzle.is_solved(),
             simulation: Simulation::new(puzzle.grid()),
-            backgound_animation: BackgroundAnimation::new(puzzle.grid())
+            backgound_animation: BackgroundAnimation::new(puzzle.grid()),
+            animation_time: 0.0
         }
     }
 }
@@ -209,6 +211,7 @@ pub fn update_game(
     
     handle_events(ui, puzzle, state);
 
+    state.animation_time += dt;
     state.simulation.step(dt);
     if state.solved == PuzzleSolveState::Solved {
         state.simulation.step_solved(dt, puzzle.grid());
@@ -243,7 +246,8 @@ pub fn update_game(
             center,
             size,
             mesh_data,
-            simulation: &state.simulation
+            simulation: &state.simulation,
+            animation_t: state.animation_time 
         });
         // if cell.get_layer_count() == 2 {
         //     for layer in cell.iter_layers() {

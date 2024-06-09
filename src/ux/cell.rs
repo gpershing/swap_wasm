@@ -1,9 +1,9 @@
 use std::f32::consts::TAU;
 
 use eframe::egui_glow::painter;
-use egui::{accesskit::Affine, epaint::CubicBezierShape, Color32, Mesh, Painter, Pos2, Shape, Stroke, Vec2};
+use egui::{accesskit::Affine, epaint::CubicBezierShape, Color32, Mesh, Painter, Pos2, Rect, Shape, Stroke, Vec2};
 
-use crate::{gameplay::{Cell, CellLayer, Color}, grids::{Direction, GridIndex}};
+use crate::{gameplay::{Cell, CellLayer, Color}, grids::{Direction, GridIndex, Rotation}};
 
 use super::{bezier::{CubicBezierControl, CubicBezierMesh, CubicBezierPoint}, segment::{Segment, SEGMENT_C0}, simulation::Simulation, SegmentMeshData};
 
@@ -12,7 +12,8 @@ pub struct CellDrawData<'a> {
     pub index: GridIndex,
     pub size: f32,
     pub mesh_data: &'a SegmentMeshData,
-    pub simulation: &'a Simulation
+    pub simulation: &'a Simulation,
+    pub animation_t: f32
 }
 
 pub fn draw_cell(cell: &Cell, painter: &Painter, data: CellDrawData<'_>) {
@@ -31,6 +32,58 @@ pub fn draw_cell(cell: &Cell, painter: &Painter, data: CellDrawData<'_>) {
             draw_intersection(layers[0], layers[1], painter, data);
         }
     }
+}
+
+fn octagon(center: Pos2, radius: f32) -> Vec<Pos2> {
+    (0..8)
+        .map(|i| (i as f32 + 0.5) * TAU / 8.0)
+        .map(|theta| center + Vec2::angled(theta) * radius)
+        .collect()
+}
+
+fn tri_rotated(center: Pos2, radius: f32, rotation: f32) -> Vec<Pos2> {
+    (0..3)
+        .map(|i| (i as f32) * TAU / 3.0 + rotation)
+        .map(|theta| center + Vec2::angled(theta) * radius)
+        .collect()
+}
+
+fn draw_swap_source(painter: &Painter, data: CellDrawData<'_>) {
+    let closed = false;
+    let fill = Color32::TRANSPARENT;
+    let stroke = Stroke::new(0.01 * data.size, Color::SWAP.color32());
+    painter.extend((0..6).map(|i| (i as f32 + 0.5) * TAU / 6.0)
+        .map(|theta| {
+            let end = data.center + Vec2::angled(theta) * data.size * 0.09;
+            let tan = Vec2::angled(theta + TAU * 0.25) * data.size * 0.025;
+            [
+                Shape::CubicBezier(CubicBezierShape { points: [
+                    data.center,
+                    data.center + tan,
+                    end + tan,
+                    end
+                ], closed, fill, stroke }),
+                Shape::CubicBezier(CubicBezierShape { points: [
+                    end,
+                    end - tan,
+                    data.center - tan,
+                    data.center
+                ], closed, fill, stroke })
+            ]
+        })
+        .flatten());
+}
+
+fn draw_source(source: Color, painter: &Painter, data: CellDrawData<'_>) {
+    let rotator_speed: f32 = 1.0;
+    match source {
+        Color::STOP => { painter.add(Shape::convex_polygon(octagon(data.center, data.size * 0.08), source.color32(), Stroke::new(0.0, Color32::TRANSPARENT))); },
+        Color::CCW => { painter.add(Shape::convex_polygon(tri_rotated(data.center, data.size * 0.06, data.animation_t * -rotator_speed), Color32::TRANSPARENT, Stroke::new(data.size * 0.01, source.color32()))); },
+        Color::CW => { painter.add(Shape::convex_polygon(tri_rotated(data.center, data.size * 0.06, data.animation_t * rotator_speed), Color32::TRANSPARENT, Stroke::new(data.size * 0.01, source.color32()))); },
+        Color::Green => { painter.rect_stroke(Rect::from_center_size(data.center, Vec2::splat(data.size * 0.12)), 0.0, Stroke::new(data.size * 0.01, source.color32())); },
+        Color::Blue => { painter.circle_stroke(data.center, data.size * 0.06, Stroke::new(data.size * 0.01, source.color32())); },
+        Color::SWAP => draw_swap_source(painter, data)
+    };
 }
 
 fn draw_simple(layer: &CellLayer, source: Option<Color>, painter: &Painter, data: CellDrawData<'_>) {
@@ -153,6 +206,9 @@ fn draw_simple(layer: &CellLayer, source: Option<Color>, painter: &Painter, data
             std::mem::swap(&mut cos, &mut sin);
             cos = -cos;
         }
+    }
+    if let Some(source) = source {
+        draw_source(source, painter, data);
     }
 }
 
