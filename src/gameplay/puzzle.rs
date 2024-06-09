@@ -28,9 +28,9 @@ pub enum PuzzleCell {
 impl PuzzleCell {
     pub const fn source(&self) -> Option<Color> {
         match self {
-            PuzzleCell::Normal { connections } => None,
-            PuzzleCell::Source { connections, source } => Some(*source),
-            PuzzleCell::Intersection { connections } => None,
+            PuzzleCell::Normal { connections: _ } => None,
+            PuzzleCell::Source { connections: _, source } => Some(*source),
+            PuzzleCell::Intersection { connections: _ } => None,
         }
     }
 
@@ -55,6 +55,7 @@ impl PuzzleCell {
 }
 
 #[derive(serde::Serialize, serde:: Deserialize)]
+#[derive(Debug, Clone)]
 pub struct Puzzle {
     grid: Grid<PuzzleCell>,
     swaps: u8

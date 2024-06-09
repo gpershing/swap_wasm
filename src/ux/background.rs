@@ -1,4 +1,4 @@
-use std::{default, f32::consts::TAU};
+use std::f32::consts::TAU;
 
 use egui::{ahash::HashMap, Color32, Painter, Pos2, Rect, Rounding, Stroke, Vec2};
 

@@ -1,11 +1,10 @@
 use std::f32::consts::TAU;
 
-use eframe::egui_glow::painter;
-use egui::{accesskit::Affine, epaint::CubicBezierShape, Color32, Mesh, Painter, Pos2, Rect, Shape, Stroke, Vec2};
+use egui::{epaint::CubicBezierShape, Color32, Painter, Pos2, Rect, Shape, Stroke, Vec2};
 
-use crate::{gameplay::{Cell, CellLayer, Color}, grids::{Direction, GridIndex, Rotation}};
+use crate::{gameplay::{Cell, CellLayer, Color}, grids::{Direction, GridIndex}};
 
-use super::{bezier::{CubicBezierControl, CubicBezierMesh, CubicBezierPoint}, segment::{Segment, SEGMENT_C0}, simulation::Simulation, SegmentMeshData};
+use super::{simulation::Simulation, SegmentMeshData};
 
 pub struct CellDrawData<'a> {
     pub center: Pos2,

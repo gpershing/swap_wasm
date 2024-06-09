@@ -1,6 +1,6 @@
-use egui::{emath::{self, RectTransform}, Color32, EventFilter, Modifiers, Pos2, Rect, Response, Rounding, Sense, Shape, Stroke, Ui, Vec2};
+use egui::{emath::{self, RectTransform}, EventFilter, Modifiers, Pos2, Rect, Response, Sense, Ui, Vec2};
 
-use crate::{gameplay::{Cell, Color, GameGrid, PlayingPuzzle, Puzzle, PuzzleSolveState, SwapRecord}, grids::{Direction, Grid, GridIndex}};
+use crate::{gameplay::{Color, PlayingPuzzle, PuzzleSolveState, SwapRecord}, grids::GridIndex};
 
 use super::{background::BackgroundAnimation, cell::{draw_cell, CellDrawData}, simulation::Simulation, SegmentMeshData};
 

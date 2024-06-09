@@ -28,26 +28,6 @@ impl CubicBezierPoint {
     }
 }
 
-pub struct CubicBezierSegmented {
-    points: Vec<Pos2>,
-    length: f32
-}
-
-// https://en.wikipedia.org/wiki/De_Casteljau%27s_algorithm
-pub fn split(curve: [Pos2; 4], t: f32) -> [[Pos2; 4]; 2] {
-    let [a, b, c, d] = curve;
-    let ab = a.lerp(b, t);
-    let bc = b.lerp(c, t);
-    let cd = c.lerp(d, t);
-    let abc = ab.lerp(bc, t);
-    let bcd = bc.lerp(cd, t);
-    let m = abc.lerp(bcd, t);
-    [
-        [a, ab, abc, m],
-        [m, bcd, cd, d]
-    ]
-}
-
 pub fn compute(curve: [Pos2; 4], t: f32) -> Pos2 {
     let s = 1.0 - t;
     curve[0] * s * s * s 

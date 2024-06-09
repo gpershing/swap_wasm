@@ -77,6 +77,9 @@ impl eframe::App for App {
                     if ui.button("Debug").clicked() {
                         self.set_puzzle(crate::gameplay::debug_puzzle::debug_puzzle());
                     }
+                    if ui.button("Reset").clicked() {
+                        self.set_puzzle(self.puzzle.puzzle().clone());
+                    }
                 });
 
                 egui::widgets::global_dark_light_mode_buttons(ui);

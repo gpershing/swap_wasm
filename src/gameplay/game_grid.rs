@@ -4,7 +4,7 @@ use egui::ahash::{HashMap, HashMapExt, HashSet, HashSetExt};
 
 use crate::grids::{Grid, GridIndex, Rotation};
 
-use super::{cell::CellLayer, Cell, CellIdProvider, ColorSet, PuzzleCell, SwapRecord};
+use super::{cell::CellLayer, Cell, ColorSet, PuzzleCell, SwapRecord};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[derive(serde::Serialize, serde:: Deserialize)]
@@ -57,9 +57,8 @@ fn can_swap(grid: &Grid<Cell>, a: GridIndex, b: GridIndex) -> bool {
 impl GameGrid for Grid<Cell> {
     fn from_puzzle_grid(puzzle_grid: Grid<PuzzleCell>) -> Self {
         let mut grid = Self::with_size(puzzle_grid.size());
-        let mut ids = CellIdProvider::new();
         for (pos, cell) in puzzle_grid.into_iter() {
-            grid.insert(pos, Cell::new(ids.next(), cell));
+            grid.insert(pos, Cell::new(cell)).unwrap();
         }
         grid.fill();
         grid
@@ -70,10 +69,10 @@ impl GameGrid for Grid<Cell> {
             self.iter_connected_layers(index).unwrap().count() == layer.connections.len());
         if !all_connected { return GridSolveState::NotAllConnected }
 
-        let all_filled = self.iter_layers().all(|(index, layer)| !layer.fill.is_empty());
+        let all_filled = self.iter_layers().all(|(_index, layer)| !layer.fill.is_empty());
         if !all_filled { return GridSolveState::NotAllFilled }
 
-        let double_filled = self.iter_layers().any(|(index, layer)| layer.fill.iter().take(2).count() == 2);
+        let double_filled = self.iter_layers().any(|(_index, layer)| layer.fill.iter().take(2).count() == 2);
         if double_filled { return GridSolveState::DoubleFilled }
 
         fn has_duplicate_fill(slf: &Grid<Cell>) -> bool {

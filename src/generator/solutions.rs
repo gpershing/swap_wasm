@@ -1,9 +1,7 @@
-use std::collections::VecDeque;
-
-use egui::ahash::{HashMap, HashMapExt, HashSet, HashSetExt};
+use egui::ahash::{HashSet, HashSetExt};
 use rand::seq::IteratorRandom;
 
-use crate::{gameplay::{Color, GameGrid, GameGridIndex, GridSolveState, LayerConnection, PuzzleCell, PuzzleSolveState}, generator::connections::connect_groups, grids::{Direction, DirectionMap, DirectionSet, Grid, GridIndex}};
+use crate::{gameplay::{Color, GameGrid, GridSolveState, PuzzleCell}, generator::connections::connect_groups, grids::{Grid, GridIndex}};
 
 use super::GeneratorSettings;
 
@@ -52,7 +50,7 @@ fn create_grid_with_knockouts(generator_settings: &GeneratorSettings) -> Grid<()
     }
 
     for position in positions {
-        grid.insert(position, ());
+        grid.insert(position, ()).unwrap();
     }
     grid
 }
@@ -183,7 +181,7 @@ fn allocate_groups(grid: Grid<()>, generator_settings: &GeneratorSettings) -> Re
                     }
                 }
                 else {
-                    group_grid.insert(position, GeneratorCell::SingleGroup(group.color));
+                    group_grid.insert(position, GeneratorCell::SingleGroup(group.color)).unwrap();
                 }
             }
             else {
@@ -200,88 +198,6 @@ fn allocate_groups(grid: Grid<()>, generator_settings: &GeneratorSettings) -> Re
 
     Ok(group_grid)
 }
-
-// fn knockout_loops(grid: &mut Grid<ConnectionCell>, positions: &HashMap<GridIndex, Option<usize>>, intersections_left: &mut usize, generator_settings: &GeneratorSettings) {
-//     fn get_layer(grid: &Grid<ConnectionCell>, position: GridIndex, layer: Option<usize>) -> &DirectionSet {
-//         match grid.get(position).unwrap() {
-//             ConnectionCell::Single(ls) => &ls[0],
-//             ConnectionCell::Intersection(ls) => &ls[layer.unwrap_or(0)],
-//         }
-//     }
-    
-//     loop {
-//         if !chance(generator_settings.knockout_loop_chance) {
-//             break
-//         }
-        
-//         let origin = positions.iter().choose(&mut rand::thread_rng()).unwrap();
-//         let mut paths = HashMap::new();
-//         let mut prevs = HashMap::new();
-//         let mut explored: HashSet<GridIndex> = HashSet::new();
-//         let mut to_explore: VecDeque<_> = VecDeque::new();
-//         to_explore.push_back((*origin.0, *origin.1));
-//         paths.insert(*origin.0, 1);
-
-//         while let Some(exploring) = to_explore.pop_front() {
-//             println!("{to_explore:?}");
-//             if !explored.insert(exploring.0) { continue }
-//             let layer = get_layer(grid, exploring.0, exploring.1);
-//             let count = paths.get(&exploring.0).cloned().unwrap_or(0);
-
-//             for neighbor in grid.iter_neighbors_for(exploring.0, layer.iter_set())
-//                 .filter(|neighbor| !explored.contains(&neighbor.0) && match positions.get(&neighbor.0) {
-//                     Some(layer) => get_layer(grid, neighbor.0, *layer).contains(neighbor.1.inverse()),
-//                     None => false,
-//                 }) {
-//                 let neighbor_layer = *positions.get(&neighbor.0).unwrap();
-//                 match paths.entry(neighbor.0) {
-//                     std::collections::hash_map::Entry::Occupied(mut entry) => *entry.get_mut() += count,
-//                     std::collections::hash_map::Entry::Vacant(mut entry) => { entry.insert(count); },
-//                 }
-//                 prevs.insert(neighbor.0, (exploring.0, exploring.1, neighbor.1, neighbor_layer));
-//                 to_explore.push_back((neighbor.0, neighbor_layer));
-//             }
-//         }
-
-//         if let Some((remove_to, remove_from)) = paths.iter()
-//             .filter(|(_, count)| **count > 1)
-//             .filter_map(|(p, _)| prevs.get(p).map(|prev| (*p, *prev)))
-//             .choose(&mut rand::thread_rng()) {
-//             let layer = *get_layer(grid, remove_to, remove_from.3);
-//             let cell: &mut ConnectionCell = grid.get_mut(remove_to).unwrap();
-//             let remove_as_intersection = *intersections_left >= 0 && chance(generator_settings.intersection_chance)
-//                 && (match cell {
-//                     ConnectionCell::Single(_) => true,
-//                     ConnectionCell::Intersection(_) => false
-//                 });
-//             if remove_as_intersection {
-//                 let mut l0 = DirectionSet::empty();
-//                 for dir in layer.iter_set().filter(|dir| *dir == remove_from.2.inverse()) {
-//                     l0.insert(dir);
-//                 }
-//                 let mut l1 = DirectionSet::empty();
-//                 l1.insert(remove_from.2.inverse());
-//                 println!("{l0:?} {l1:?}");
-//                 *cell = ConnectionCell::Intersection([l0, l1]);
-//                 *intersections_left -= 1;
-//             }
-//             else {
-//                 match cell {
-//                     ConnectionCell::Single(ls) => ls[0].remove(remove_from.2.inverse()),
-//                     ConnectionCell::Intersection(ls) => ls[remove_from.3.unwrap()].remove(remove_from.2.inverse()),
-//                 };
-//                 let other_cell = grid.get_mut(remove_from.0).unwrap();
-//                 match other_cell {
-//                     ConnectionCell::Single(ls) => ls[0].remove(remove_from.2),
-//                     ConnectionCell::Intersection(ls) => ls[remove_from.1.unwrap()].remove(remove_from.2),
-//                 };
-//             }
-//         }
-//         else {
-//             break
-//         }
-//     }
-// }
 
 fn verify(grid: Grid<PuzzleCell>) -> Result<Grid<PuzzleCell>, GeneratorFailure> {
     let game_grid = Grid::from_puzzle_grid(grid.clone());

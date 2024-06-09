@@ -1,6 +1,5 @@
-use egui::ahash::{HashMap, HashMapExt};
 use rand::prelude::*;
-use crate::{gameplay::{Cell, Color, GameGrid, LayerConnection, Puzzle, PuzzleCell, SwapRecord}, generator::solver::find_solution, grids::{Direction, DirectionMap, DirectionMapData, DirectionSet, Grid, GridIndex, GridSize, Rotation}};
+use crate::{gameplay::{Cell, Color, GameGrid, Puzzle, SwapRecord}, grids::{Grid, GridIndex, GridSize, Rotation}};
 
 use super::solutions::generate_solution;
 
@@ -111,7 +110,7 @@ fn reverse_swap(grid: &mut Grid<Cell>) -> SwapRecord {
         possible_rotations.push(Rotation::CW);
     }
     let positions: Vec<_> = grid.iter().filter(|(_, c)| c.source() != Some(Color::Red))
-        .map(|(p, c)| p).collect();
+        .map(|(p, _)| p).collect();
     let mut selected: [GridIndex; 2] = [GridIndex { x: 0, y: 0 }, GridIndex { x: 0, y: 0 }];
     let mut rotations: [Rotation; 2] = [Rotation::None, Rotation::None];
     loop {

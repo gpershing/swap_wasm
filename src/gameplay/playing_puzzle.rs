@@ -26,6 +26,10 @@ impl PlayingPuzzle {
         Self { puzzle, grid, history: Vec::new() }
     }
 
+    pub const fn puzzle(&self) -> &Puzzle {
+        &self.puzzle
+    }
+
     pub const fn grid(&self) -> &Grid<Cell> {
         &self.grid
     }
@@ -48,10 +52,6 @@ impl PlayingPuzzle {
 
     pub fn iter_cells(&self) -> impl Iterator<Item = (GridIndex, &Cell)> {
         self.grid.iter()
-    }
-
-    pub fn reset(&mut self) {
-        self.grid = Grid::from_puzzle_grid(self.puzzle.start());
     }
 
     pub fn try_swap(&mut self, a: GridIndex, b: GridIndex) -> Option<SwapRecord> {

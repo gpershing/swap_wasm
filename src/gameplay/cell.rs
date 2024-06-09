@@ -1,6 +1,6 @@
 use crate::grids::{Direction, DirectionMap, DirectionSet, Rotation};
 
-use super::{cell_id::CellId, puzzle::{LayerConnection, PuzzleCell}, Color, ColorSet};
+use super::{puzzle::{LayerConnection, PuzzleCell}, Color, ColorSet};
 
 #[derive(Debug, Clone, Copy)]
 #[derive(serde::Serialize, serde:: Deserialize)]
@@ -24,12 +24,11 @@ pub enum CellData {
 #[derive(Debug, Clone, Copy)]
 #[derive(serde::Serialize, serde:: Deserialize)]
 pub struct Cell {
-    id: CellId,
     data: CellData
 }
 
 impl Cell {
-    pub fn new(id: CellId, puzzle_cell: PuzzleCell) -> Self {
+    pub fn new(puzzle_cell: PuzzleCell) -> Self {
         let data = match puzzle_cell {
             PuzzleCell::Normal { connections } => CellData::Normal { layer: CellLayer { connections, fill: ColorSet::empty() }, source: None },
             PuzzleCell::Source { connections, source } => CellData::Normal { layer: CellLayer { connections, fill: ColorSet::singleton(source) }, source: Some(source) },
@@ -39,7 +38,6 @@ impl Cell {
             ] },
         };
         Self {
-            id,
             data
         }
     }
@@ -63,13 +61,9 @@ impl Cell {
         }
     }
 
-    pub const fn id(&self) -> CellId {
-        self.id
-    }
-
     pub fn total_connections(&self) -> usize {
         match self.data {
-            CellData::Normal { layer, source } => layer.connections.len(),
+            CellData::Normal { layer, source: _ } => layer.connections.len(),
             CellData::Intersection { layers } => layers[0].connections.len() + layers[1].connections.len(),
         }
     }
@@ -165,24 +159,9 @@ impl Cell {
         rotation
     }
 
-    pub fn set_min_fill(&mut self) {
-        match &mut self.data {
-            CellData::Normal { layer, source } => {
-                layer.fill = match source {
-                    Some(source) => ColorSet::singleton(*source),
-                    None => ColorSet::empty(),
-                }
-            },
-            CellData::Intersection { layers } => {
-                layers[0].fill = ColorSet::empty();
-                layers[1].fill = ColorSet::empty();
-            },
-        }
-    }
-
     pub fn clear_fill(&mut self) {
         match &mut self.data {
-            CellData::Normal { layer, source } => {
+            CellData::Normal { layer, source: _ } => {
                 layer.fill = ColorSet::empty()
             },
             CellData::Intersection { layers } => {
