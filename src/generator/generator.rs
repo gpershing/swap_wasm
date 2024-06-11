@@ -1,5 +1,5 @@
 use rand::prelude::*;
-use crate::{gameplay::{Cell, Color, GameGrid, Puzzle, SwapRecord}, grids::{Grid, GridIndex, GridSize, Rotation}};
+use crate::{gameplay::{Cell, Color, GameGrid, Puzzle, SwapRecord}, generator::solver::find_solution, grids::{Grid, GridIndex, GridSize, Rotation}};
 
 use super::solutions::generate_solution;
 
@@ -70,9 +70,9 @@ pub fn generate_puzzle(generator_settings: &GeneratorSettings) -> Puzzle {
 
     let puzzle = create_puzzle_from_grid(working_grid, solution.len() as u8);
 
-    // if let Some(short_sol) = find_solution(&puzzle, solution.len() as u8 - 1) {
-    //     println!("ACTUAL {short_sol:?}");
-    // }
+    if let Some(short_sol) = find_solution(&puzzle, solution.len() as u8 - 1) {
+        println!("ACTUAL {short_sol:?}");
+    }
 
     puzzle
 }
