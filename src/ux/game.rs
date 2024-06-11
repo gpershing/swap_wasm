@@ -91,8 +91,14 @@ fn update_input(input: &mut GameInput, ui: &Ui, response: Response, puzzle: &Pla
     fn get_grid_pos(ui: &Ui, puzzle: &PlayingPuzzle, to_game_coords: &RectTransform) -> Option<GridIndex> {
         ui.ctx().pointer_interact_pos().and_then(|pos| {
             let game_coord_f = to_game_coords * pos;
-            let game_coord = GridIndex::new(game_coord_f.x.round() as usize, game_coord_f.y.round() as usize);
-            puzzle.index_has_cell(game_coord).then_some(game_coord)
+            let game_coord_round = game_coord_f.round();
+            if game_coord_round.x < 0.0 || game_coord_round.y < 0.0 {
+                None
+            }
+            else {
+                let game_coord = GridIndex::new(game_coord_round.x as usize, game_coord_round.y as usize);
+                puzzle.index_has_cell(game_coord).then_some(game_coord)
+            }
         })
     }
 
