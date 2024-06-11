@@ -78,7 +78,7 @@ fn sewn_triangles_with_feathering(len: u32) -> impl Iterator<Item = [u32; 3]> {
 
 impl CubicBezierMesh {
     pub fn new(curve: &[CubicBezierPoint], width: f32, feathering: f32, precision: f32) -> Self {
-        const LUT_LEN: usize = 20;
+        const LUT_LEN: usize = 10;
 
         if curve.len() < 2 {
             panic!()
