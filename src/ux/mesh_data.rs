@@ -36,7 +36,7 @@ const fn free(point: Pos2, handle1: Vec2, handle2: Vec2) -> CubicBezierPoint {
 }
 
 impl SegmentMeshData {
-    pub fn init(width: f32, precision: f32) -> Self {
+    pub fn init(width: f32, feathering: f32, precision: f32) -> Self {
         Self {
             c0: CubicBezierMesh::new(vec![
                 mirrored(p!(0.5, 0.0), v!(-0.01, 0.0)),
@@ -44,7 +44,7 @@ impl SegmentMeshData {
                 free(p!(0.34, -0.05), v!(0.07, 0.0), v!(-0.12, 0.0)),
                 free(p!(0.0, 0.14), v!(0.12, 0.0), v!(-0.077, 0.0)),
                 mirrored(p!(-0.14, 0.0), v!(0.0, -0.077))
-            ].as_slice(), width, precision),
+            ].as_slice(), width, feathering, precision),
 
             l0: CubicBezierMesh::new(vec![
                 mirrored(p!(0.5, 0.0), v!(-0.01, 0.0)),
@@ -54,7 +54,7 @@ impl SegmentMeshData {
                 mirrored(p!(-0.05, 0.34), v!(0.0, 0.07)),
                 free(p!(0.0, 0.47), v!(0.0, -0.05), v!(0.0, 0.01)),
                 mirrored(p!(0.0, 0.5), v!(0.0, 0.01))
-            ].as_slice(), width, precision),
+            ].as_slice(), width, feathering, precision),
 
             l1: CubicBezierMesh::new(vec![
                 mirrored(p!(0.5, 0.0), v!(-0.01, 0.0)),
@@ -66,7 +66,7 @@ impl SegmentMeshData {
                 mirrored(p!(0.05, 0.34), v!(0.0, 0.07)),
                 free(p!(0.0, 0.47), v!(0.0, -0.05), v!(0.0, 0.01)),
                 mirrored(p!(0.0, 0.5), v!(0.0, 0.01))
-            ].as_slice(), width, precision),
+            ].as_slice(), width, feathering, precision),
 
             h0: CubicBezierMesh::new(vec![
                 mirrored(p!(0.5, 0.0), v!(-0.01, 0.0)),
@@ -78,7 +78,7 @@ impl SegmentMeshData {
                 free(p!(-0.34, -0.05), v!(0.07, 0.0), v!(-0.06, 0.0)),
                 free(p!(-0.47, 0.0), v!(0.01, 0.0), v!(-0.05, 0.0)),
                 mirrored(p!(-0.5, 0.0), v!(-0.01, 0.0))
-            ].as_slice(), width, precision),
+            ].as_slice(), width, feathering, precision),
 
             t0: CubicBezierMesh::new(vec![
                 mirrored(p!(0.5, 0.0), v!(-0.01, 0.0)),
@@ -88,13 +88,13 @@ impl SegmentMeshData {
                 free(p!(-0.34, 0.05), v!(0.13, 0.0), v!(-0.07, 0.0)),
                 free(p!(-0.47, 0.0), v!(0.01, 0.0), v!(-0.05, 0.0)),
                 mirrored(p!(-0.5, 0.0), v!(-0.01, 0.0))
-            ].as_slice(), width, precision),
+            ].as_slice(), width, feathering, precision),
 
             o0: CubicBezierMesh::new(vec![
                 mirrored(p!(0.3, 0.0), v!(-0.04, -0.03)),
                 mirrored(p!(0.12, 0.0497), v!(-0.0207, 0.05)),
                 mirrored(p!(0.212, 0.212), v!(0.0495, 0.0071))
-            ].as_slice(), width, precision),
+            ].as_slice(), width, feathering, precision),
             
             ic0: CubicBezierMesh::new(vec![
                 mirrored(p!(0.5, 0.0), v!(-0.01, 0.0)),
@@ -104,12 +104,12 @@ impl SegmentMeshData {
                 mirrored(p!(0.31, 0.09), v!(0.07, 0.0)),
                 free(p!(0.47, 0.0), v!(-0.05, 0.0), v!(0.01, 0.0)),
                 mirrored(p!(0.5, 0.0), v!(0.01, 0.0)),
-            ].as_slice(), width, precision),
+            ].as_slice(), width, feathering, precision),
 
             ih0: CubicBezierMesh::new(vec![
                 mirrored(p!(0.5, 0.0), v!(-0.01, 0.0)),
                 mirrored(p!(-0.5, 0.0), v!(-0.01, 0.0))
-            ].as_slice(), width, precision),
+            ].as_slice(), width, feathering, precision),
 
             ih1: CubicBezierMesh::new(vec![
                 mirrored(p!(0.5, 0.0), v!(-0.01, 0.0)),
@@ -120,7 +120,7 @@ impl SegmentMeshData {
                 free(p!(-0.34, 0.05), v!(0.07, 0.0), v!(-0.06, 0.0)),
                 free(p!(-0.47, 0.0), v!(0.01, 0.0), v!(-0.05, 0.0)),
                 mirrored(p!(-0.5, 0.0), v!(-0.01, 0.0))
-            ].as_slice(), width, precision),
+            ].as_slice(), width, feathering, precision),
 
             il0: CubicBezierMesh::new(vec![
                 mirrored(p!(0.5, 0.0), v!(-0.01, 0.0)),
@@ -129,7 +129,7 @@ impl SegmentMeshData {
                 free(p!(0.05, 0.34), v!(0.0, -0.13), v!(0.0, 0.07)),
                 free(p!(0.0, 0.47), v!(0.0, -0.05), v!(0.0, 0.01)),
                 mirrored(p!(0.0, 0.5), v!(0.0, 0.01))
-            ].as_slice(), width, precision)
+            ].as_slice(), width, feathering, precision)
         }
     }
 }

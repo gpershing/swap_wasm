@@ -57,19 +57,27 @@ pub struct CubicBezierMesh {
 }
 
 // Assumes this layout:
-// 0 2 4 6 8 ...
-// 1 3 5 7 9
-fn sewn_triangles(len: u32) -> impl Iterator<Item = [u32; 3]> {
-    (0..len-2).map(|idx| if idx % 2 == 0 {
-        [idx, idx + 1, idx + 2]
-    }
-    else {
-        [idx, idx + 2, idx + 1]
-    })
+// 0 4 8 
+// 1 5 9
+// 2 6 10
+// 3 7 11
+fn sewn_triangles_with_feathering(len: u32) -> impl Iterator<Item = [u32; 3]> {
+    let column_count = (len - 4) / 4;
+    (0..column_count).map(|col_idx| {
+        let base = col_idx * 4;
+        [
+            [base, base + 1, base + 4],
+            [base + 1, base + 5, base + 4],
+            [base + 1, base + 2, base + 5],
+            [base + 2, base + 6, base + 5],
+            [base + 2, base + 3, base + 6],
+            [base + 3, base + 7, base + 6]
+        ]
+    }).flatten()
 }
 
 impl CubicBezierMesh {
-    pub fn new(curve: &[CubicBezierPoint], width: f32, precision: f32) -> Self {
+    pub fn new(curve: &[CubicBezierPoint], width: f32, feathering: f32, precision: f32) -> Self {
         const LUT_LEN: usize = 20;
 
         if curve.len() < 2 {
@@ -86,12 +94,15 @@ impl CubicBezierMesh {
         let total_length_inv = 1.0 / total_length;
 
         let half_width = width * 0.5;
+        let feather_width = half_width + feathering * 0.5;
 
         let mut vertices = Vec::new();
-        let previous_normal: Vec2 = (beziers[0][1] - beziers[0][0]).rot90().normalized() * half_width;
+        let previous_normal: Vec2 = (beziers[0][1] - beziers[0][0]).rot90().normalized();
         let mut previous_vertex: Pos2 = beziers[0][0];
-        vertices.push(CubicBezierMeshVertex { position: previous_vertex + previous_normal, t: 0.0 });
-        vertices.push(CubicBezierMeshVertex { position: previous_vertex - previous_normal, t: 0.0 });
+        vertices.push(CubicBezierMeshVertex { position: previous_vertex + previous_normal * feather_width, t: 0.0 });
+        vertices.push(CubicBezierMeshVertex { position: previous_vertex + previous_normal * half_width, t: 0.0 });
+        vertices.push(CubicBezierMeshVertex { position: previous_vertex - previous_normal * half_width, t: 0.0 });
+        vertices.push(CubicBezierMeshVertex { position: previous_vertex - previous_normal * feather_width, t: 0.0 });
 
         let mut at_t = 0.0;
         for (index, curve) in beziers.iter().enumerate() {
@@ -109,11 +120,13 @@ impl CubicBezierMesh {
                 else {
                     *vertex - curve[2]
                 };
-                let normal = direction.rot90().normalized() * half_width;
+                let normal = direction.rot90().normalized();
                 let t = at_t + (lut_index as f32) * lut_idx_to_t;
 
-                vertices.push(CubicBezierMeshVertex { position: *vertex + normal, t });
-                vertices.push(CubicBezierMeshVertex { position: *vertex - normal, t });
+                vertices.push(CubicBezierMeshVertex { position: *vertex + normal * feather_width, t });
+                vertices.push(CubicBezierMeshVertex { position: *vertex + normal * half_width, t });
+                vertices.push(CubicBezierMeshVertex { position: *vertex - normal * half_width, t });
+                vertices.push(CubicBezierMeshVertex { position: *vertex - normal * feather_width, t });
 
                 previous_vertex = *vertex;
             }
@@ -127,10 +140,15 @@ impl CubicBezierMesh {
         let mut mesh = Mesh::default();
         mesh.reserve_vertices(self.vertices.len());
         mesh.reserve_triangles(self.vertices.len() - 2);
-        for vtx in self.vertices.iter() {
-            mesh.colored_vertex(transform(vtx.position), color_fn(vtx.t));
+        for (index, vtx) in self.vertices.iter().enumerate() {
+            if index % 4 == 0 || index % 4 == 3 {
+                mesh.colored_vertex(transform(vtx.position), Color32::TRANSPARENT);
+            }
+            else {
+                mesh.colored_vertex(transform(vtx.position), color_fn(vtx.t));
+            }
         }
-        for tri in sewn_triangles(self.vertices.len() as u32) {
+        for tri in sewn_triangles_with_feathering(self.vertices.len() as u32) {
             mesh.add_triangle(tri[0], tri[1], tri[2]);
         }
         mesh

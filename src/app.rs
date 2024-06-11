@@ -24,7 +24,7 @@ impl App {
         Self {
             puzzle,
             game_state,
-            mesh_data: SegmentMeshData::init(0.03, 0.01)
+            mesh_data: SegmentMeshData::init(0.03, 0.01, 0.01)
         }
     }
 }
