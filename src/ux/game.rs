@@ -1,14 +1,15 @@
 use egui::{emath::{self, RectTransform}, EventFilter, Modifiers, Pos2, Rect, Response, Sense, Ui, Vec2};
 
-use crate::{gameplay::{Color, PlayingPuzzle, PuzzleSolveState, SwapRecord}, grids::GridIndex};
+use crate::{gameplay::{PlayingPuzzle, PuzzleSolveState, SwapRecord}, grids::GridIndex};
 
-use super::{background::BackgroundAnimation, cell::{draw_cell, CellDrawData}, palette::{self}, simulation::Simulation, SegmentMeshData};
+use super::{background::BackgroundAnimation, cell::{draw_cell, CellDrawData}, palette, simulation::Simulation, swaps_left::{SwapsLeftAnimation, SwapsLeftDrawData}, SegmentMeshData};
 
 pub struct GameState {
     input: GameInputState,
     solved: PuzzleSolveState,
     simulation: Simulation,
     backgound_animation: BackgroundAnimation,
+    swaps_left_animation: SwapsLeftAnimation,
     animation_time: f32
 }
 
@@ -19,6 +20,7 @@ impl GameState {
             solved: puzzle.is_solved(),
             simulation: Simulation::new(puzzle.grid()),
             backgound_animation: BackgroundAnimation::new(puzzle.grid()),
+            swaps_left_animation: SwapsLeftAnimation::new(puzzle.swaps_made()),
             animation_time: 0.0
         }
     }
@@ -230,17 +232,13 @@ pub fn update_game(
     }
 
     let swap_indicator_y = game_rect.bottom() + style.scale * 0.15;
-    for swap_i in 0..puzzle.swap_limit() {
-        let filled = swap_i >= puzzle.swaps_made();
-        let t = (swap_i as f32 + 0.5) / (puzzle.swap_limit() as f32);
-        let center = Pos2::new(game_rect.right() * t + game_rect.left() * (1.0 - t), swap_indicator_y);
-        if filled {
-            painter.circle_filled(center, style.scale * 0.10, palette.get(Color::SWAP));
-        }
-        else {
-            painter.circle_stroke(center, style.scale * 0.10, (1.0, palette.get(Color::SWAP)));
-        }
-    }
+    state.swaps_left_animation.draw(&painter, puzzle.swaps_made(), puzzle.swap_limit(), dt, SwapsLeftDrawData {
+        size: style.scale,
+        left_x: game_rect.left(),
+        right_x: game_rect.right(),
+        y: swap_indicator_y,
+        palette
+    });
 
     for (grid_pos, cell) in puzzle.iter_cells() {
         let center = to_screen * Pos2 { x: grid_pos.x as f32, y: grid_pos.y as f32 };
