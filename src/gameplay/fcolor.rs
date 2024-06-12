@@ -10,6 +10,10 @@ impl FColor {
         Self([r, g, b])
     }
 
+    pub const fn from_color32(color: Color32) -> FColor {
+        Self::rgb(color.r() as f32, color.g() as f32, color.b() as f32)
+    }
+
     pub fn to_color32(self) -> Color32 {
         Color32::from_rgb(self.r() as u8, self.g() as u8, self.b() as u8)
     }

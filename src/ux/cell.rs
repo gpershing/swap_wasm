@@ -4,7 +4,7 @@ use egui::{epaint::CubicBezierShape, Color32, Painter, Pos2, Rect, Shape, Stroke
 
 use crate::{gameplay::{Cell, CellLayer, Color}, grids::{Direction, GridIndex}};
 
-use super::{simulation::Simulation, SegmentMeshData};
+use super::{palette::Palette, simulation::Simulation, SegmentMeshData};
 
 pub struct CellDrawData<'a> {
     pub center: Pos2,
@@ -12,7 +12,8 @@ pub struct CellDrawData<'a> {
     pub size: f32,
     pub mesh_data: &'a SegmentMeshData,
     pub simulation: &'a Simulation,
-    pub animation_t: f32
+    pub animation_t: f32,
+    pub palette: &'a Palette
 }
 
 pub fn draw_cell(cell: &Cell, painter: &Painter, data: CellDrawData<'_>) {
@@ -50,7 +51,7 @@ fn tri_rotated(center: Pos2, radius: f32, rotation: f32) -> Vec<Pos2> {
 fn draw_swap_source(painter: &Painter, data: CellDrawData<'_>) {
     let closed = false;
     let fill = Color32::TRANSPARENT;
-    let stroke = Stroke::new(0.01 * data.size, Color::SWAP.color32());
+    let stroke = Stroke::new(0.01 * data.size, data.palette.get(Color::SWAP));
     painter.extend((0..6).map(|i| (i as f32 + 0.5) * TAU / 6.0)
         .map(|theta| {
             let end = data.center + Vec2::angled(theta) * data.size * 0.09;
@@ -76,11 +77,11 @@ fn draw_swap_source(painter: &Painter, data: CellDrawData<'_>) {
 fn draw_source(source: Color, painter: &Painter, data: CellDrawData<'_>) {
     let rotator_speed: f32 = 1.0;
     match source {
-        Color::STOP => { painter.add(Shape::convex_polygon(octagon(data.center, data.size * 0.08), source.color32(), Stroke::new(0.0, Color32::TRANSPARENT))); },
-        Color::CCW => { painter.add(Shape::convex_polygon(tri_rotated(data.center, data.size * 0.06, data.animation_t * -rotator_speed), Color32::TRANSPARENT, Stroke::new(data.size * 0.01, source.color32()))); },
-        Color::CW => { painter.add(Shape::convex_polygon(tri_rotated(data.center, data.size * 0.06, data.animation_t * rotator_speed), Color32::TRANSPARENT, Stroke::new(data.size * 0.01, source.color32()))); },
-        Color::Green => { painter.rect_stroke(Rect::from_center_size(data.center, Vec2::splat(data.size * 0.12)), 0.0, Stroke::new(data.size * 0.01, source.color32())); },
-        Color::Blue => { painter.circle_stroke(data.center, data.size * 0.06, Stroke::new(data.size * 0.01, source.color32())); },
+        Color::STOP => { painter.add(Shape::convex_polygon(octagon(data.center, data.size * 0.08), data.palette.get(source), Stroke::new(0.0, Color32::TRANSPARENT))); },
+        Color::CCW => { painter.add(Shape::convex_polygon(tri_rotated(data.center, data.size * 0.06, data.animation_t * -rotator_speed), Color32::TRANSPARENT, Stroke::new(data.size * 0.01, data.palette.get(source)))); },
+        Color::CW => { painter.add(Shape::convex_polygon(tri_rotated(data.center, data.size * 0.06, data.animation_t * rotator_speed), Color32::TRANSPARENT, Stroke::new(data.size * 0.01, data.palette.get(source)))); },
+        Color::Green => { painter.rect_stroke(Rect::from_center_size(data.center, Vec2::splat(data.size * 0.12)), 0.0, Stroke::new(data.size * 0.01, data.palette.get(source))); },
+        Color::Blue => { painter.circle_stroke(data.center, data.size * 0.06, Stroke::new(data.size * 0.01, data.palette.get(source))); },
         Color::SWAP => draw_swap_source(painter, data)
     };
 }
@@ -88,7 +89,7 @@ fn draw_source(source: Color, painter: &Painter, data: CellDrawData<'_>) {
 fn draw_simple(layer: &CellLayer, source: Option<Color>, painter: &Painter, data: CellDrawData<'_>) {
     let connections: Vec<_> = layer.connections.iter_set().collect();
     if connections.len() == 0 {
-        let color = source.map(|s| s.color32()).unwrap_or(Color32::WHITE);
+        let color = source.map(|s| data.palette.get(s)).unwrap_or(data.palette.empty);
         for r in 0..8 {
             let rotation = (r as f32) * TAU * 0.125;
             let cos = rotation.cos();

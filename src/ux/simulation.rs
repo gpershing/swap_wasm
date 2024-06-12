@@ -2,6 +2,8 @@ use egui::{ahash::{HashMap, HashMapExt}, Color32};
 
 use crate::{gameplay::{Cell, Color, FColor, SwapRecord}, grids::{Direction, Grid, GridIndex, Rotation}};
 
+use super::palette::Palette;
+
 #[derive(Debug, Clone, Copy)]
 pub struct SimulationSegment {
     start_index: usize,
@@ -25,7 +27,8 @@ pub struct Simulation {
     segments: HashMap<(GridIndex, Direction), SimulationSegment>,
 
     simulated_cell_count: usize,
-    void_index: usize
+    void_index: usize,
+    color_index_start: usize
 }
 
 impl Simulation {
@@ -48,7 +51,7 @@ impl Simulation {
         let mut current = [[0.0; 6]].repeat(all_cell_count);
         let mut next = [[0.0; 6]].repeat(all_cell_count);
         let retain = [[1.0; 6]].repeat(simulated_cell_count);
-        let mut current_colors = [FColor::rgb(0.0, 0.0, 0.0)].repeat(all_cell_count);
+        let current_colors = [FColor::rgb(0.0, 0.0, 0.0)].repeat(all_cell_count);
 
         let mut at = 0;
         let mut inner_connections = Vec::new();
@@ -105,10 +108,9 @@ impl Simulation {
             let index: usize = color_index_start + color.index();
             current[index][color.index()] = Self::SOURCE;
             next[index][color.index()] = Self::SOURCE;
-            current_colors[index] = color.fcolor();
         }
 
-        Self { t: 0.0, indices: cells, current, next, retain, current_colors, segments, simulated_cell_count, void_index }
+        Self { t: 0.0, indices: cells, current, next, retain, current_colors, segments, simulated_cell_count, void_index, color_index_start }
     }
 
     pub fn update_fill(&mut self, grid: &Grid<Cell>) {
@@ -127,15 +129,19 @@ impl Simulation {
         }
     }
 
-    pub fn step(&mut self, dt: f32) {
+    pub fn step(&mut self, dt: f32, palette: &Palette) {
+        for color in Color::ALL {
+            let index: usize = self.color_index_start + color.index();
+            self.current_colors[index] = palette.get_fcolor(color);
+        }
         self.t += dt;
         while self.t >= Self::DT {
-            self.step_dt();
+            self.step_dt(palette);
             self.t -= Self::DT;
         }
     }
 
-    fn step_dt(&mut self) {
+    fn step_dt(&mut self, palette: &Palette) {
         for (index, cell_indices) in self.indices.iter().enumerate().take(self.simulated_cell_count) {
             let mut sum = 0.0;
             for i in 0..6 {
@@ -143,16 +149,17 @@ impl Simulation {
                 sum += self.next[index][i];
             }
             if sum <= 0.001 {
-                self.current_colors[index] = FColor::rgb(0.0, 0.0, 0.0);
+                self.current_colors[index] = palette.empty_f();
             }
             else {
                 let sum_inv = 1.0 / sum;
                 let mut next_color = FColor::rgb(0.0, 0.0, 0.0);
                 for color in Color::ALL {
                     let t = self.next[index][color.index()].min(1.0);
-                    next_color += color.fcolor() * (t * (2.0 - t)) * self.next[index][color.index()] * sum_inv;
+                    next_color += palette.get_fcolor(color) * (t * (2.0 - t)) * self.next[index][color.index()] * sum_inv;
                 }
-                self.current_colors[index] = next_color;
+                let empty_t = sum.min(1.0);
+                self.current_colors[index] = palette.empty_f() * (1.0 - empty_t) + next_color * empty_t;
             }
         }
         std::mem::swap(&mut self.current, &mut self.next);

@@ -2,14 +2,14 @@ use egui::{emath::{self, RectTransform}, EventFilter, Modifiers, Pos2, Rect, Res
 
 use crate::{gameplay::{Color, PlayingPuzzle, PuzzleSolveState, SwapRecord}, grids::GridIndex};
 
-use super::{background::BackgroundAnimation, cell::{draw_cell, CellDrawData}, simulation::Simulation, SegmentMeshData};
+use super::{background::BackgroundAnimation, cell::{draw_cell, CellDrawData}, palette::{self}, simulation::Simulation, SegmentMeshData};
 
 pub struct GameState {
     input: GameInputState,
     solved: PuzzleSolveState,
     simulation: Simulation,
     backgound_animation: BackgroundAnimation,
-    animation_time: f32,
+    animation_time: f32
 }
 
 impl GameState {
@@ -167,6 +167,12 @@ pub fn update_game(
     ui.ctx().request_repaint();
 
     let dt = ui.input(|i| i.stable_dt);
+    let palette = if ui.ctx().style().visuals.dark_mode {
+        &palette::DARK
+    }
+    else {
+        &palette::DEFAULT
+    };
 
     let bounds = puzzle.size();
     let margin: egui::Margin = ui.style().spacing.window_margin;
@@ -218,7 +224,7 @@ pub fn update_game(
     handle_events(ui, puzzle, state);
 
     state.animation_time += dt;
-    state.simulation.step(dt);
+    state.simulation.step(dt, palette);
     if state.solved == PuzzleSolveState::Solved {
         state.simulation.step_solved(dt, puzzle.grid());
     }
@@ -229,16 +235,16 @@ pub fn update_game(
         let t = (swap_i as f32 + 0.5) / (puzzle.swap_limit() as f32);
         let center = Pos2::new(game_rect.right() * t + game_rect.left() * (1.0 - t), swap_indicator_y);
         if filled {
-            painter.circle_filled(center, style.scale * 0.10, Color::SWAP.color32());
+            painter.circle_filled(center, style.scale * 0.10, palette.get(Color::SWAP));
         }
         else {
-            painter.circle_stroke(center, style.scale * 0.10, (1.0, Color::SWAP.color32()));
+            painter.circle_stroke(center, style.scale * 0.10, (1.0, palette.get(Color::SWAP)));
         }
     }
 
     for (grid_pos, cell) in puzzle.iter_cells() {
         let center = to_screen * Pos2 { x: grid_pos.x as f32, y: grid_pos.y as f32 };
-        state.backgound_animation.draw_background_cell(&painter, grid_pos, cell, center, style.scale, dt);
+        state.backgound_animation.draw_background_cell(&painter, palette, grid_pos, cell, center, style.scale, dt);
     }
 
     for (grid_pos, cell) in puzzle.iter_cells() {
@@ -253,95 +259,8 @@ pub fn update_game(
             size,
             mesh_data,
             simulation: &state.simulation,
-            animation_t: state.animation_time 
+            animation_t: state.animation_time,
+            palette
         });
-        // if cell.get_layer_count() == 2 {
-        //     for layer in cell.iter_layers() {
-        //         let connections_vec: Vec<_> = layer.connections.iter_set().collect();
-        //         let stroke = Stroke::new(
-        //             1.0,
-        //             layer.fill.iter().next().map(|c| c.color32()).unwrap_or(Color32::WHITE)
-        //             );
-        //         let effective_center = if connections_vec.len() == 2 && connections_vec[0] == connections_vec[1].inverse() {
-        //             match connections_vec[0] {
-        //                 Direction::E | Direction::W => center + Vec2 { x: 0.0, y: -0.1 } * size,
-        //                 Direction::N | Direction::S => center + Vec2 { x: -0.1, y: 0.0 } * size,
-        //             }
-        //         }
-        //         else {
-        //             connections_vec.iter().fold(center, |fc, dir| fc + dir.to_vec() * 0.1 * style.scale)
-        //         };
-        //         painter.extend(connections_vec.iter().map(|dir|
-        //             Shape::line_segment([effective_center, center + dir.to_vec() * 0.5 * size], stroke)));
-        //     }
-        // }
-        // else {
-        //     let layer = cell.get_layer(0).unwrap();
-        //     painter.extend(layer.connections.iter_set().map(|d| Shape::line_segment(
-        //         [center, center + d.to_vec() * 0.5 * size],
-        //         Stroke::new(
-        //             1.0,
-        //             layer.fill.iter().next().map(|c| c.color32()).unwrap_or(Color32::WHITE)
-        //         ))));
-        // }
-        // if let Some(source) = cell.source() {
-        //     painter.circle_stroke(center, style.scale * 0.2, Stroke::new(1.0, source.color32()));
-        // }
     }
 }
-
-// impl Default for Game {
-//     fn default() -> Self {
-//         Self {
-//             puzzle: Puzzle::new(),
-//             scale: 50.0
-//         }
-//     }
-// }
-
-// impl Game {
-//     fn draw_cell(&self, painter: &Painter, to_screen: &RectTransform, pos: grid_math::Pos2, cell: &Cell) {
-//         let center = to_screen * pos.to_posf();
-//         painter.extend(cell.connections().iter().map(|d| Shape::line_segment(
-//             [center, center + d.to_vecf() * 0.5 * self.scale],
-//         Stroke::new(1.0, Color32::from_rgb(255, 255, 255)))));
-//     }
-// }
-
-// impl Widget for Game {
-//     fn ui(self, ui: &mut Ui) -> egui::Response {
-//         let bounds = self.puzzle.bounds();
-//         let margin = ui.style().spacing.window_margin;
-//         let game_size = bounds.size.to_vecf() * self.scale + margin.sum();
-//         let (response, painter) = ui.allocate_painter(game_size, Sense::click_and_drag());
-
-//         let game_rect = Rect::from_center_size(painter.clip_rect().center(), game_size);
-//         let game_coords = Rect::from_min_size(bounds.origin.to_posf() - Vec2::splat(0.5), bounds.size.to_vecf());
-//         let to_screen = emath::RectTransform::from_to(game_coords, game_rect);
-//         let to_game_coords = to_screen.inverse();
-
-//         for (pos, cell) in self.puzzle.cells() {
-//             self.draw_cell(&painter, &to_screen, *pos, cell);
-//         }
-
-//         let clicked_immediate = response.contains_pointer() && ui.ctx().input(|i| i.pointer.primary_down());
-
-//         if clicked_immediate {
-//             println!("click now");
-//         }
-
-//         if response.clicked() {
-//             println!("clicked!");
-//             if let Some(pos) = ui.ctx().pointer_interact_pos() {
-//                 let game_coord = to_game_coords * pos;
-//                 println!("{game_coord:?}");
-//             }
-//         }
-
-//         if response.drag_started() {
-//             println!("dragged!");
-//         }
-        
-//         response
-//     }
-// }
