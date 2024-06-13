@@ -36,7 +36,7 @@ impl Simulation {
     const ALPHA: f32 = 0.15;
     const SOURCE: f32 = 3.0;
     const RETAIN_LOSS: f32 = 0.995;
-    const SOLVED_GAIN: f32 = 0.1;
+    const SOLVED_GAIN: f32 = 0.25;
     pub const DT: f32 = 0.003;
 
     pub fn new(grid: &Grid<Cell>) -> Self {
