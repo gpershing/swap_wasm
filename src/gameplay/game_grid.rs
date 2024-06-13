@@ -36,8 +36,7 @@ pub trait GameGrid {
     fn get_layer_mut(&mut self, index: GameGridIndex) -> Option<&mut CellLayer>;
 
     fn iter_layers(&self) -> impl Iterator<Item = (GameGridIndex, &CellLayer)>;
-    fn iter_layers_at(&self, index: GridIndex) -> Option<impl Iterator<Item = (GameGridIndex, &CellLayer)>>;
-
+    
     fn iter_connected_layers(&self, index: GameGridIndex) -> Option<impl Iterator<Item = (GameGridIndex, &CellLayer)>>;
     fn all_connected(&self, index: GameGridIndex) -> Option<HashSet<GameGridIndex>>;
 }
@@ -158,13 +157,6 @@ impl GameGrid for Grid<Cell> {
             .flat_map(|c| c.1.iter_layers()
                 .enumerate()
                 .map(move |(idx, layer)| (GameGridIndex { grid_index: c.0, layer_index: idx }, layer)))
-    }
-
-    fn iter_layers_at(&self, index: GridIndex) -> Option<impl Iterator<Item = (GameGridIndex, &CellLayer)>> {
-        self.get(index).map(move |cell|
-            cell.iter_layers()
-                .enumerate()
-                .map(move |(idx, layer)| (GameGridIndex { grid_index: index, layer_index: idx }, layer)))
     }
 
     fn iter_connected_layers(&self, index: GameGridIndex) -> Option<impl Iterator<Item = (GameGridIndex, &CellLayer)>> {

@@ -30,8 +30,6 @@ pub struct GeneratorSettings {
     pub extra_region_chance: f32,
     // Chance of adding an extra source to a region.
     pub extra_source_chance: f32,
-    // Chance of adding any extra connection.
-    pub extra_connection_chance: f32,
     // Chance of adding an intersection.
     pub intersection_chance: f32,
     // Maximum number of intersections.
@@ -52,7 +50,6 @@ impl Default for GeneratorSettings {
             min_regions: 2,
             extra_region_chance: 0.1,
             extra_source_chance: 0.1,
-            extra_connection_chance: 0.5,
             intersection_chance: 0.0,
             max_intersections: 0,
             knockout_loop_chance: 0.33

@@ -47,7 +47,7 @@ impl GameInputState {
             GameInput::Drag(Some(drag)) => drag == index,
             GameInput::None => false,
             GameInput::Drag(None) => false,
-            GameInput::Down(_) => false,
+            GameInput::Down => false,
         }
     }
 
@@ -73,7 +73,7 @@ pub struct GameStyle {
 #[derive(Debug, Clone, Copy)]
 enum GameInput {
     None,
-    Down(Option<GridIndex>),
+    Down,
     Drag(Option<GridIndex>),
 }
 
@@ -81,7 +81,7 @@ impl GameInput {
     pub fn is_none(&self) -> bool {
         match self {
             GameInput::None => true,
-            GameInput::Down(_) => false,
+            GameInput::Down => false,
             GameInput::Drag(_) => false,
         }
     }
@@ -118,7 +118,7 @@ fn update_input(input: &mut GameInput, ui: &Ui, response: Response, puzzle: &Pla
     if response.drag_stopped() {
         let dragging = match input {
             GameInput::None => None,
-            GameInput::Down(_) => None,
+            GameInput::Down => None,
             GameInput::Drag(id) => *id
         };
         *input = GameInput::None;
@@ -134,7 +134,7 @@ fn update_input(input: &mut GameInput, ui: &Ui, response: Response, puzzle: &Pla
     if input.is_none() {
         let down = response.contains_pointer() && ui.ctx().input(|i| i.pointer.primary_down());
         if down {
-            *input = GameInput::Down(get_grid_pos(ui, puzzle, to_game_coords));
+            *input = GameInput::Down;
             return GameInputResponse::Down(get_grid_pos(ui, puzzle, to_game_coords));
         }
         else {
