@@ -1,4 +1,4 @@
-use egui::{emath::{self, RectTransform}, Button, EventFilter, Modifiers, Pos2, Rect, Response, Sense, Ui, Vec2};
+use egui::{emath::{self, RectTransform}, Button, EventFilter, Modifiers, Painter, Pos2, Rect, Response, Sense, Ui, Vec2};
 
 use crate::{gameplay::{Color, PlayingPuzzle, PuzzleSolveState, SwapRecord}, grids::GridIndex};
 
@@ -228,8 +228,51 @@ pub fn update_game(
     state: &mut GameState,
     puzzle_state: &mut PuzzleState,
     style: &GameStyle,
-    mesh_data: &SegmentMeshData) -> Option<GameCompletionAction> {
+    mesh_data: &SegmentMeshData
+) -> Option<GameCompletionAction> {
     ui.ctx().request_repaint();
+
+    const CONTROLS_HEIGHT: f32 = 50.0;
+    const INDICATORS_HEIGHT: f32 = 50.0;
+    const MAX_SIZE: f32 = 72.0;
+
+    let (response, painter) = ui.allocate_painter(ui.available_size(), Sense::click_and_drag());
+    
+    let bounds = puzzle.size();
+    let margin: egui::Margin = ui.style().spacing.window_margin;
+    let max_size: Vec2 = painter.clip_rect().size();
+    let game_width_max = max_size.x - margin.sum().x;
+    let game_height_max = max_size.y - margin.sum().y - CONTROLS_HEIGHT - INDICATORS_HEIGHT;
+    let cell_size = (game_width_max / bounds.width as f32).min(game_height_max / bounds.height as f32).min(style.scale).floor().max(MAX_SIZE);
+
+    let center_x = painter.clip_rect().center().x;
+    let game_size = Vec2::new(bounds.width as f32, bounds.height as f32) * cell_size;
+    let controls_size = Vec2::new(game_size.x - ui.spacing().item_spacing.x, CONTROLS_HEIGHT);
+    let controls_rect = Rect::from_center_size(Pos2 { x: center_x, y: painter.clip_rect().top() + controls_size.y * 0.5 }, controls_size);
+    let game_rect = Rect::from_center_size(Pos2 { x: center_x, y: controls_rect.bottom() + game_size.y * 0.5 }, game_size);
+    let indicators_size = Vec2::new(game_size.x, INDICATORS_HEIGHT);
+    let indicators_rect = Rect::from_center_size(Pos2 { x: center_x, y: game_rect.bottom() + indicators_size.y * 0.5 }, indicators_size);
+
+    update_game_after_sizing(ui, puzzle, state, puzzle_state, response, GameSizing { painter, cell_size, game_rect, controls_rect, indicators_rect }, mesh_data)
+}
+
+struct GameSizing {
+    painter: Painter,
+    cell_size: f32,
+    game_rect: Rect,
+    controls_rect: Rect,
+    indicators_rect: Rect
+}
+
+fn update_game_after_sizing(
+    ui: &mut Ui,
+    puzzle: &mut PlayingPuzzle,
+    state: &mut GameState,
+    puzzle_state: &mut PuzzleState,
+    response: Response,
+    game_sizing: GameSizing,
+    mesh_data: &SegmentMeshData
+) -> Option<GameCompletionAction> {
 
     let dt = ui.input(|i| i.stable_dt);
     let palette = if ui.ctx().style().visuals.dark_mode {
@@ -239,20 +282,13 @@ pub fn update_game(
         &palette::DEFAULT
     };
 
+    let GameSizing { painter, cell_size, game_rect, controls_rect, indicators_rect } = game_sizing;
     let bounds = puzzle.size();
-    let margin: egui::Margin = ui.style().spacing.window_margin;
-    let game_size = Vec2::new(bounds.width as f32, bounds.height as f32) * style.scale;
-    let controls_height: f32 = style.scale * 0.15;
-    let game_size_with_margins = game_size + margin.sum() + Vec2 { x: 0.0, y: controls_height * 2.0 };
-    let (response, painter) = ui.allocate_painter(game_size_with_margins, Sense::click_and_drag());
 
-    let game_rect = Rect::from_center_size(painter.clip_rect().center(), game_size);
     let game_coords = Rect::from_min_size(Pos2::new(-0.5, -0.5), Vec2 { x: bounds.width as f32, y: bounds.height as f32 });
     let to_screen = emath::RectTransform::from_to(game_coords, game_rect);
     let to_game_coords = to_screen.inverse();
 
-    let control_margin = ui.spacing().item_spacing.x;
-    let controls_rect = Rect::from_two_pos(game_rect.min + Vec2 { x: control_margin * 0.5, y: -margin.top }, game_rect.min + Vec2 { x: game_rect.width() - control_margin * 0.5, y: -controls_height - margin.top });
     let mut controls_response = ui.allocate_ui_at_rect(controls_rect, |ui|
         draw_controls(ui, palette, puzzle_state.hint_shown || puzzle.swaps_made() > 0, puzzle_state.solved)).inner;
 
@@ -302,19 +338,15 @@ pub fn update_game(
         state.simulation.step_solved(dt, puzzle.grid());
     }
 
-    let swap_indicator_y = game_rect.bottom() + style.scale * 0.15;
     state.swaps_left_animation.draw(&painter, puzzle.swaps_made(), puzzle.swap_limit(), dt, SwapsLeftDrawData {
-        size: style.scale,
-        left_x: game_rect.left(),
-        right_x: game_rect.right(),
-        y: swap_indicator_y,
+        rect: indicators_rect,
         palette
     });
 
     for (grid_pos, cell) in puzzle.iter_cells() {
         let center = to_screen * Pos2 { x: grid_pos.x as f32, y: grid_pos.y as f32 };
         let show_hint = puzzle_state.hint_shown && puzzle.puzzle().hint() == grid_pos && puzzle.swaps_made() == 0;
-        state.backgound_animation.draw_background_cell(&painter, palette, grid_pos, cell, center, style.scale, show_hint, dt);
+        state.backgound_animation.draw_background_cell(&painter, palette, grid_pos, cell, center, cell_size, show_hint, dt);
     }
 
     for (grid_pos, cell) in puzzle.iter_cells() {
@@ -322,7 +354,7 @@ pub fn update_game(
             ui.ctx().pointer_interact_pos().unwrap_or(Pos2::ZERO)
         }
         else { to_screen * Pos2 { x: grid_pos.x as f32, y: grid_pos.y as f32 } };
-        let size = if Some(grid_pos) == state.input.selected || Some(grid_pos) == state.input.highlight { style.scale * 0.85 } else { style.scale };
+        let size = if Some(grid_pos) == state.input.selected || Some(grid_pos) == state.input.highlight { cell_size * 0.85 } else { cell_size };
         draw_cell(cell, &painter, CellDrawData {
             index: grid_pos,
             center,

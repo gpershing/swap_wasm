@@ -1,6 +1,6 @@
 use std::f32::consts::TAU;
 
-use egui::{epaint::CubicBezierShape, Color32, Painter, Pos2, Shape, Stroke, Vec2};
+use egui::{epaint::CubicBezierShape, Color32, Painter, Pos2, Rect, Shape, Stroke, Vec2};
 
 use crate::gameplay::Color;
 
@@ -11,22 +11,20 @@ pub struct SwapsLeftAnimation {
 }
 
 pub struct SwapsLeftDrawData<'a> {
-    pub size: f32,
-    pub left_x: f32,
-    pub right_x: f32,
-    pub y: f32,
+    pub rect: Rect,
     pub palette: &'a Palette
 }
 
 fn draw_swap_indicator_with_color(painter: &Painter, center: Pos2, t: f32, color: Color32, data: &SwapsLeftDrawData<'_>) {
     let closed = false;
     let fill = Color32::TRANSPARENT;
-    let stroke = Stroke::new(0.015 * data.size, color);
+    let size = data.rect.height() * 3.0;
+    let stroke = Stroke::new(0.015 * size, color);
     let max = if t >= 0.99 { 1 } else { 6 };
     painter.extend((0..max).map(|i| (i as f32 * (1.0 - t)) * TAU / 6.0 + TAU / 4.0)
         .map(|theta| {
-            let end = center + Vec2::angled(theta) * data.size * 0.09;
-            let tan = Vec2::angled(theta + TAU * 0.25) * data.size * 0.025;
+            let end = center + Vec2::angled(theta) * size * 0.09;
+            let tan = Vec2::angled(theta + TAU * 0.25) * size * 0.025;
             [
                 Shape::CubicBezier(CubicBezierShape { points: [
                     center,
@@ -80,7 +78,7 @@ impl SwapsLeftAnimation {
             };
 
             let center_t = (i_float + 0.5) / (swap_limit as f32);
-            let center = Pos2::new(data.right_x * center_t + data.left_x * (1.0 - center_t), data.y);
+            let center = Pos2::new(data.rect.right() * center_t + data.rect.left() * (1.0 - center_t), data.rect.center().y);
 
             draw_swap_indicator(painter, center, t, &data);
         }
