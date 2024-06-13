@@ -1,8 +1,13 @@
-use egui::{emath::{self, RectTransform}, EventFilter, Modifiers, Pos2, Rect, Response, Sense, Ui, Vec2};
+use egui::{emath::{self, RectTransform}, Button, EventFilter, Modifiers, Pos2, Rect, Response, Sense, Ui, Vec2};
 
-use crate::{gameplay::{PlayingPuzzle, PuzzleSolveState, SwapRecord}, grids::GridIndex};
+use crate::{gameplay::{Color, PlayingPuzzle, PuzzleSolveState, SwapRecord}, grids::GridIndex};
 
-use super::{background::BackgroundAnimation, cell::{draw_cell, CellDrawData}, palette, simulation::Simulation, swaps_left::{SwapsLeftAnimation, SwapsLeftDrawData}, SegmentMeshData};
+use super::{background::BackgroundAnimation, cell::{draw_cell, CellDrawData}, palette::{self, Palette}, simulation::Simulation, swaps_left::{SwapsLeftAnimation, SwapsLeftDrawData}, SegmentMeshData};
+
+pub enum GameCompletionAction {
+    Reset,
+    Next
+}
 
 pub struct GameState {
     input: GameInputState,
@@ -51,6 +56,13 @@ impl GameInputState {
         self.selected = None;
         self.input = GameInput::None;
     }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct PuzzleState {
+    pub hint_shown: bool,
+    pub solved: bool
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -139,9 +151,42 @@ fn update_input(input: &mut GameInput, ui: &Ui, response: Response, puzzle: &Pla
     
 }
 
-pub fn handle_events(ui: &Ui, puzzle: &mut PlayingPuzzle, state: &mut GameState) {
+struct ControlsResponse {
+    undo: bool,
+    reset: bool,
+    hint: bool,
+    skip: bool
+}
+
+fn control_button(ui: &mut Ui, palette: &Palette, name: impl Into<String>, disabled: bool, highlight: bool) -> bool {
+    let mut button = Button::new(egui::RichText::new(name).text_style(egui::TextStyle::Heading));
+    if highlight {
+        button = button.fill(palette.get(Color::SWAP).linear_multiply(0.33));
+    }
+    let response = ui.vertical_centered_justified(move |ui|
+        ui.add_enabled(!disabled, button)
+    ).inner.clicked();
+    response
+}
+
+fn draw_controls(ui: &mut Ui, palette: &Palette, show_hint: bool, solved: bool) -> ControlsResponse {
+    ui.columns(4, |columns| {
+        let undo = control_button(&mut columns[0], palette, "Undo", false, false);
+        let reset = control_button(&mut columns[1], palette, "Reset", false, false);
+        let hint = control_button(&mut columns[2], palette, "Hint", show_hint, false);
+        let skip = control_button(&mut columns[3], palette, if solved { "Next" } else { "Skip" }, false, solved);
+        ControlsResponse {
+            undo,
+            reset,
+            hint,
+            skip
+        }
+    })
+}
+
+fn handle_events(ui: &Ui, controls: &mut ControlsResponse) {
     let events = ui.input(|i| i.filtered_events(&EventFilter::default()));
-    let did_undo = events.iter().any(|e| match e {
+    controls.undo = controls.undo || events.iter().any(|e| match e {
         egui::Event::Key {
             key: egui::Key::Z,
             pressed: true,
@@ -150,13 +195,30 @@ pub fn handle_events(ui: &Ui, puzzle: &mut PlayingPuzzle, state: &mut GameState)
         } if modifiers.matches_logically(Modifiers::COMMAND) => true,
         _ => false
     });
-    if did_undo {
+}
+
+fn handle_controls(controls: ControlsResponse, puzzle: &mut PlayingPuzzle, state: &mut GameState, puzzle_state: &mut PuzzleState) -> Option<GameCompletionAction> {
+    if controls.undo {
         if let Some(record) = puzzle.try_undo() {
             state.simulation.swap(SwapRecord { a: record.a, b: record.b, a_rotation: record.b_rotation.inverse(), b_rotation: record.a_rotation.inverse() });
             state.simulation.update_fill(puzzle.grid());
             state.input.clear();
             state.solved = puzzle.is_solved();
+            puzzle_state.solved = puzzle_state.solved || state.solved == PuzzleSolveState::Solved;
         }
+    }
+    if controls.hint {
+        puzzle_state.hint_shown = true;
+    }
+
+    if controls.reset {
+        Some(GameCompletionAction::Reset)
+    }
+    else if controls.skip {
+        Some(GameCompletionAction::Next)
+    }
+    else {
+        None
     }
 }
 
@@ -164,8 +226,9 @@ pub fn update_game(
     ui: &mut Ui,
     puzzle: &mut PlayingPuzzle,
     state: &mut GameState,
+    puzzle_state: &mut PuzzleState,
     style: &GameStyle,
-    mesh_data: &SegmentMeshData) {
+    mesh_data: &SegmentMeshData) -> Option<GameCompletionAction> {
     ui.ctx().request_repaint();
 
     let dt = ui.input(|i| i.stable_dt);
@@ -179,13 +242,22 @@ pub fn update_game(
     let bounds = puzzle.size();
     let margin: egui::Margin = ui.style().spacing.window_margin;
     let game_size = Vec2::new(bounds.width as f32, bounds.height as f32) * style.scale;
-    let game_size_with_margins = game_size + margin.sum();
+    let controls_height: f32 = style.scale * 0.15;
+    let game_size_with_margins = game_size + margin.sum() + Vec2 { x: 0.0, y: controls_height * 2.0 };
     let (response, painter) = ui.allocate_painter(game_size_with_margins, Sense::click_and_drag());
 
     let game_rect = Rect::from_center_size(painter.clip_rect().center(), game_size);
     let game_coords = Rect::from_min_size(Pos2::new(-0.5, -0.5), Vec2 { x: bounds.width as f32, y: bounds.height as f32 });
     let to_screen = emath::RectTransform::from_to(game_coords, game_rect);
     let to_game_coords = to_screen.inverse();
+
+    let control_margin = ui.spacing().item_spacing.x;
+    let controls_rect = Rect::from_two_pos(game_rect.min + Vec2 { x: control_margin * 0.5, y: -margin.top }, game_rect.min + Vec2 { x: game_rect.width() - control_margin * 0.5, y: -controls_height - margin.top });
+    let mut controls_response = ui.allocate_ui_at_rect(controls_rect, |ui|
+        draw_controls(ui, palette, puzzle_state.hint_shown || puzzle.swaps_made() > 0, puzzle_state.solved)).inner;
+
+    handle_events(ui, &mut controls_response);
+    let completion_response = handle_controls(controls_response, puzzle, state, puzzle_state);
 
     let swap_action = match update_input(&mut state.input.input, ui, response, puzzle, &to_game_coords) {
         GameInputResponse::None => None,
@@ -220,10 +292,9 @@ pub fn update_game(
             state.simulation.swap(record);
             state.simulation.update_fill(puzzle.grid());
             state.solved = puzzle.is_solved();
+            puzzle_state.solved = puzzle_state.solved || state.solved == PuzzleSolveState::Solved;
         }
     }
-    
-    handle_events(ui, puzzle, state);
 
     state.animation_time += dt;
     state.simulation.step(dt, palette);
@@ -242,7 +313,8 @@ pub fn update_game(
 
     for (grid_pos, cell) in puzzle.iter_cells() {
         let center = to_screen * Pos2 { x: grid_pos.x as f32, y: grid_pos.y as f32 };
-        state.backgound_animation.draw_background_cell(&painter, palette, grid_pos, cell, center, style.scale, dt);
+        let show_hint = puzzle_state.hint_shown && puzzle.puzzle().hint() == grid_pos && puzzle.swaps_made() == 0;
+        state.backgound_animation.draw_background_cell(&painter, palette, grid_pos, cell, center, style.scale, show_hint, dt);
     }
 
     for (grid_pos, cell) in puzzle.iter_cells() {
@@ -261,4 +333,6 @@ pub fn update_game(
             palette
         });
     }
+
+    completion_response
 }

@@ -68,7 +68,7 @@ pub fn generate_puzzle(generator_settings: &GeneratorSettings) -> Puzzle {
     let solution = reverse_solution(&mut working_grid, generator_settings.swap_count);
     println!("EXPECTED {solution:?}");
 
-    let puzzle = create_puzzle_from_grid(working_grid, solution.len() as u8);
+    let puzzle = create_puzzle_from_grid(working_grid, solution.len() as u8, solution.first().copied().unwrap());
 
     if let Some(short_sol) = find_solution(&puzzle, solution.len() as u8 - 1) {
         println!("ACTUAL {short_sol:?}");
@@ -77,12 +77,20 @@ pub fn generate_puzzle(generator_settings: &GeneratorSettings) -> Puzzle {
     puzzle
 }
 
-fn create_puzzle_from_grid(game_grid: Grid<Cell>, swaps: u8) -> Puzzle {
+fn create_puzzle_from_grid(mut game_grid: Grid<Cell>, swaps: u8, first_move: SwapRecord) -> Puzzle {
+    game_grid.fill();
+    let hint = if game_grid.get(first_move.a).map(|cell| cell.has_color_in_any_layer(Color::SWAP)).unwrap_or(false) {
+        first_move.b
+    }
+    else {
+        first_move.a
+    };
+
     let mut grid = Grid::with_size(game_grid.size());
     for (pos, cell) in game_grid.iter() {
         grid.insert(pos, cell.to_puzzle_cell()).unwrap();
     }
-    Puzzle::new(grid, swaps)
+    Puzzle::new(grid, swaps, hint)
 }
 fn swap_record_matches(grid: &Grid<Cell>, record: SwapRecord) -> bool {
     let cell_a = grid.get(record.a).unwrap();

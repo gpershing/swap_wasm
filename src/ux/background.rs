@@ -1,6 +1,6 @@
 use std::f32::consts::TAU;
 
-use egui::{ahash::HashMap, Painter, Pos2, Rect, Rounding, Stroke, Vec2};
+use egui::{ahash::HashMap, Color32, Painter, Pos2, Rect, Rounding, Stroke, Vec2};
 
 use crate::{gameplay::{Cell, Color, FColor}, grids::{Grid, GridIndex, Rotation}};
 
@@ -12,6 +12,7 @@ pub struct BackgroundAnimation {
 
 #[derive(Debug, Clone, Copy, Default)]
 struct BackgroundData {
+    hint_glow: f32,
     swap_glow: f32,
     stop_glow: f32,
     rotation_glow: f32,
@@ -87,7 +88,7 @@ impl BackgroundAnimation {
         }
     }
 
-    pub fn draw_background_cell(&mut self, painter: &Painter, palette: &Palette, index: GridIndex, cell: &Cell, center: Pos2, scale: f32, dt: f32) {
+    pub fn draw_background_cell(&mut self, painter: &Painter, palette: &Palette, index: GridIndex, cell: &Cell, center: Pos2, scale: f32, show_hint: bool, dt: f32) {
         let data = self.data.get_mut(&index).unwrap();
         Self::update_cell(data, cell, dt);
 
@@ -123,5 +124,21 @@ impl BackgroundAnimation {
                 painter.circle_filled(center + Vec2::angled(theta) * radius, scale * 0.02, color);
             }
         }
+
+        fn update_hint(hint_glow: &mut f32, painter: &Painter, palette: &Palette, center: Pos2, scale: f32, show_hint: bool, dt: f32) {
+            if show_hint {
+                *hint_glow = (*hint_glow + dt).min(1.0);
+            }
+            else {
+                *hint_glow = (*hint_glow - dt * 5.0).max(0.0);
+            }
+
+            if *hint_glow > 0.001 {
+                painter.rect(
+                    Rect::from_center_size(center, Vec2::splat(scale * 0.94)),
+                    Rounding::same(scale * 0.05), palette.get(Color::SWAP).gamma_multiply(*hint_glow * 0.33), Stroke::new(0.0, Color32::TRANSPARENT));
+            }
+        }
+        update_hint(&mut data.hint_glow, painter, palette, center, scale, show_hint, dt);
     }
 }

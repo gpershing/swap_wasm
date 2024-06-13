@@ -58,12 +58,13 @@ impl PuzzleCell {
 #[derive(Debug, Clone)]
 pub struct Puzzle {
     grid: Grid<PuzzleCell>,
-    swaps: u8
+    swaps: u8,
+    hint: GridIndex
 }
 
 impl Puzzle {
-    pub fn new(grid: Grid<PuzzleCell>, swaps: u8) -> Self {
-        Self { grid, swaps }
+    pub fn new(grid: Grid<PuzzleCell>, swaps: u8, hint: GridIndex) -> Self {
+        Self { grid, swaps, hint }
     }
 
     pub fn swap_limit(&self) -> u8 {
@@ -72,6 +73,10 @@ impl Puzzle {
 
     pub fn start(&self) -> Grid<PuzzleCell> {
         self.grid.clone()
+    }
+
+    pub const fn hint(&self) -> GridIndex {
+        self.hint
     }
 }
 
@@ -83,5 +88,5 @@ pub fn fallback_puzzle() -> Puzzle {
     grid.insert(GridIndex { x: 1, y: 0 }, PuzzleCell::Normal {
         connections: DirectionSet::from_iter([Direction::E].into_iter()) })
         .unwrap();
-    Puzzle { grid, swaps: 1 }
+    Puzzle { grid, swaps: 1, hint: GridIndex { x: 1, y: 0 } }
 }

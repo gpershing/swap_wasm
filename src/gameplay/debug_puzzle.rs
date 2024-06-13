@@ -29,7 +29,7 @@ pub fn test_puzzle() -> Puzzle {
     grid.insert(GridIndex::new(0, 1), PuzzleCell::Normal { connections: dirs(false, true, false, true) }).unwrap();
     grid.insert(GridIndex::new(0, 2), PuzzleCell::Normal { connections: dirs(false, true, false, true) }).unwrap();
 
-    Puzzle::new(grid, 4)
+    Puzzle::new(grid, 4, GridIndex { x: 0, y: 0 })
 }
 
 #[allow(dead_code)]
@@ -79,5 +79,5 @@ pub fn debug_puzzle() -> Puzzle {
     grid.insert(GridIndex::new(9, 2), PuzzleCell::Intersection { connections: ldirs(2, 1, 2, 0) } ).unwrap();
     grid.insert(GridIndex::new(9, 4), PuzzleCell::Intersection { connections: ldirs(2, 2, 2, 2) } ).unwrap();
 
-    Puzzle::new(grid, 4)
+    Puzzle::new(grid, 4, GridIndex { x: 0, y: 0 })
 }

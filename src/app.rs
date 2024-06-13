@@ -1,12 +1,14 @@
-use crate::{gameplay::{fallback_puzzle, PlayingPuzzle, Puzzle}, generator::{generate_puzzle, GeneratorSettings}, grids::GridSize, ux::{update_game, GameState, GameStyle, SegmentMeshData}};
+use crate::{gameplay::{fallback_puzzle, PlayingPuzzle, Puzzle}, generator::{generate_puzzle, GeneratorSettings}, grids::GridSize, ux::{update_game, GameState, GameStyle, PuzzleState, SegmentMeshData}};
 
 pub struct App {
     puzzle: PlayingPuzzle,
+    puzzle_state: PuzzleState,
     game_state: GameState,
     mesh_data: SegmentMeshData
 }
 
 const PUZZLE_KEY: &'static str = "swap_puzzle";
+const PUZZLE_STATE_KEY: &'static str = "swap_puzzle_state";
 
 impl App {
     /// Called once before the first frame.
@@ -17,12 +19,16 @@ impl App {
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
         let puzzle = cc.storage
-            .and_then(|storage| eframe::get_value(storage, &PUZZLE_KEY))
+            .and_then(|storage| eframe::get_value(storage, PUZZLE_KEY))
             .unwrap_or_else(|| PlayingPuzzle::play(fallback_puzzle()));
+        let puzzle_state = cc.storage
+            .and_then(|storage| eframe::get_value(storage, PUZZLE_STATE_KEY))
+            .unwrap_or_default();
         let game_state = GameState::new(&puzzle);
 
         Self {
             puzzle,
+            puzzle_state,
             game_state,
             mesh_data: SegmentMeshData::init(0.03, 0.02, 0.04)
         }
@@ -30,9 +36,18 @@ impl App {
 }
 
 impl App {
-    pub fn set_puzzle(&mut self, puzzle: Puzzle) {
+    fn set_puzzle_without_puzzle_state(&mut self, puzzle: Puzzle) {
         self.puzzle = PlayingPuzzle::play(puzzle);
         self.game_state = GameState::new(&self.puzzle);
+    }
+
+    pub fn reset_puzzle(&mut self) {
+        self.set_puzzle_without_puzzle_state(self.puzzle.puzzle().clone());
+    }
+
+    pub fn set_puzzle(&mut self, puzzle: Puzzle) {
+        self.set_puzzle_without_puzzle_state(puzzle);
+        self.puzzle_state = PuzzleState::default();
     }
 }
 
@@ -40,6 +55,7 @@ impl eframe::App for App {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, PUZZLE_KEY, &self.puzzle);
+        eframe::set_value(storage, PUZZLE_STATE_KEY, &self.puzzle_state);
     }
 
     /// Called each time the UI needs repainting, which may be many times per second.
@@ -62,23 +78,8 @@ impl eframe::App for App {
                     ui.add_space(16.0);
                 }
                 ui.menu_button("DEBUG", |ui| {
-                    if ui.button("Generate").clicked() {
-                        self.set_puzzle(generate_puzzle(&GeneratorSettings {
-                            stop_sources: crate::generator::SourceSettings::Maybe,
-                            rotator_sources: crate::generator::SourceSettings::Definitely,
-                            size: GridSize { width: 4, height: 4 },
-                            swap_count: 4,
-                            max_intersections: 5,
-                            intersection_chance: 0.25,
-                            knockout_loop_chance: 0.9,
-                            ..Default::default()
-                        }));
-                    }
                     if ui.button("Debug").clicked() {
                         self.set_puzzle(crate::gameplay::debug_puzzle::debug_puzzle());
-                    }
-                    if ui.button("Reset").clicked() {
-                        self.set_puzzle(self.puzzle.puzzle().clone());
                     }
                 });
 
@@ -90,9 +91,24 @@ impl eframe::App for App {
             ui.heading("swap");
 
             ui.centered_and_justified(|ui| {
-                update_game(ui, &mut self.puzzle, &mut self.game_state, &GameStyle {
+                let response = update_game(ui, &mut self.puzzle, &mut self.game_state, &mut self.puzzle_state, &GameStyle {
                     scale: 150.0
                 }, &self.mesh_data);
+                if let Some(response) = response {
+                    match response {
+                        crate::ux::GameCompletionAction::Reset => self.reset_puzzle(),
+                        crate::ux::GameCompletionAction::Next => self.set_puzzle(generate_puzzle(&GeneratorSettings {
+                            stop_sources: crate::generator::SourceSettings::Maybe,
+                            rotator_sources: crate::generator::SourceSettings::Definitely,
+                            size: GridSize { width: 4, height: 4 },
+                            swap_count: 4,
+                            max_intersections: 5,
+                            intersection_chance: 0.25,
+                            knockout_loop_chance: 0.9,
+                            ..Default::default()
+                        })),
+                    }
+                }
             });
             // self.game.ui(ui);
 
