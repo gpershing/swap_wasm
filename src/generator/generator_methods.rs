@@ -112,10 +112,10 @@ fn reverse_solution(grid: &mut Grid<Cell>, swaps: u8) -> Vec<SwapRecord> {
 fn reverse_swap(grid: &mut Grid<Cell>) -> SwapRecord {
     let mut possible_rotations = vec![Rotation::None];
     if grid.iter_layers().any(|layer| layer.1.fill.contains(Color::CCW)) {
-        possible_rotations.push(Rotation::CCW);
+        possible_rotations.push(Rotation::CounterClockwise);
     }
     if grid.iter_layers().any(|layer| layer.1.fill.contains(Color::CW)) {
-        possible_rotations.push(Rotation::CW);
+        possible_rotations.push(Rotation::Clockwise);
     }
     let positions: Vec<_> = grid.iter().filter(|(_, c)| c.source() != Some(Color::Red))
         .map(|(p, _)| p).collect();

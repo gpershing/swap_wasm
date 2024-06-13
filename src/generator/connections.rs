@@ -61,18 +61,18 @@ fn disconnect(grid: &mut ConnectionGrid, a: CxnGridIndex, b: CxnGridIndex, a_to_
 }
 
 fn get_all_indices(grid: &ConnectionGrid, match_color: Color) -> impl Iterator<Item = CxnGridIndex> + '_ {
-    grid.iter().map(move |(grid_index, cell)| match cell {
+    grid.iter().flat_map(move |(grid_index, cell)| match cell {
         ConnectionCell::Single(_, color) if *color == match_color => vec![CxnGridIndex { grid_index, layer_index: None }],
         ConnectionCell::Single(_, _) => vec![],
         ConnectionCell::Intersection(_, colors) => colors.iter().enumerate()
             .filter_map(|(i, color)| (*color == match_color).then_some(CxnGridIndex { grid_index, layer_index: Some(i) }))
             .collect(),
-    }).flatten()
+    })
 }
 
 fn get_layer(grid: &ConnectionGrid, index: CxnGridIndex) -> DirectionSet {
     match grid.get(index.grid_index).unwrap() {
-        ConnectionCell::Single(cxs, _) => cxs.clone(),
+        ConnectionCell::Single(cxs, _) => *cxs,
         ConnectionCell::Intersection(cxs, _) => {
             let mut set = DirectionSet::empty();
             let layer = match index.layer_index {
@@ -105,7 +105,7 @@ pub fn connect_groups(gen_grid: Grid<GeneratorCell>, generator_settings: &Genera
     let mut present_colors = Vec::new();
     for color in Color::ALL {
         let indices: HashSet<_> = get_all_indices(&grid, color).collect();
-        if indices.len() > 0 {
+        if !indices.is_empty() {
             present_colors.push(color);
         }
         else {
@@ -134,13 +134,13 @@ pub fn connect_groups(gen_grid: Grid<GeneratorCell>, generator_settings: &Genera
         let mut potential_sources: Vec<_> = get_all_indices(&grid, *color)
             .filter(|idx| idx.layer_index.is_none())
             .collect();
-        if potential_sources.len() == 0 {
+        if potential_sources.is_empty() {
             return Err(GeneratorFailure::CannotAddSource);
         }
 
         let source = potential_sources.swap_remove(random_index(potential_sources.len()));
         all_sources.insert(source.grid_index, *color);
-        while potential_sources.len() > 0 && chance(generator_settings.extra_source_chance) {
+        while !potential_sources.is_empty() && chance(generator_settings.extra_source_chance) {
             all_sources.insert(potential_sources.swap_remove(random_index(potential_sources.len())).grid_index, *color);
         }
     }
@@ -170,7 +170,7 @@ fn knockout_loops(grid: &mut ConnectionGrid, color: Color, intersections_left: &
             break;
         }
 
-        let indices: HashSet<_> = get_all_indices(&grid, color).collect();
+        let indices: HashSet<_> = get_all_indices(grid, color).collect();
         if indices.len() <= 3 {
             break;
         }

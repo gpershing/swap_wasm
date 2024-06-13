@@ -7,8 +7,8 @@ pub struct App {
     mesh_data: SegmentMeshData
 }
 
-const PUZZLE_KEY: &'static str = "swap_puzzle";
-const PUZZLE_STATE_KEY: &'static str = "swap_puzzle_state";
+const PUZZLE_KEY: &str = "swap_puzzle";
+const PUZZLE_STATE_KEY: &str = "swap_puzzle_state";
 
 impl App {
     /// Called once before the first frame.

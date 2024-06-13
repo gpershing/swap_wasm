@@ -147,8 +147,8 @@ impl Cell {
         let cw = self.has_color_in_any_layer(Color::CW);
         match (ccw, cw) {
             (true, true) => Rotation::None,
-            (true, false) => Rotation::CCW,
-            (false, true) => Rotation::CW,
+            (true, false) => Rotation::CounterClockwise,
+            (false, true) => Rotation::Clockwise,
             (false, false) => Rotation::None,
         }
     }

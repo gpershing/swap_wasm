@@ -2,18 +2,18 @@
 #[derive(serde::Serialize, serde::Deserialize)]
 pub enum Rotation {
     None,
-    CCW,
+    CounterClockwise,
     Half,
-    CW
+    Clockwise
 }
 
 impl Rotation {
     pub const fn inverse(self) -> Rotation {
         match self {
             Rotation::None => Rotation::None,
-            Rotation::CCW => Rotation::CW,
+            Rotation::CounterClockwise => Rotation::Clockwise,
             Rotation::Half => Rotation::Half,
-            Rotation::CW => Rotation::CCW,
+            Rotation::Clockwise => Rotation::CounterClockwise,
         }
     }
 }

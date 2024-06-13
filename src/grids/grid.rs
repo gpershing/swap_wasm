@@ -182,9 +182,8 @@ impl<T> Iterator for GridIter<T> {
         loop {
             if let Some(index) = self.index_iter.next() {
                 unsafe {
-                    match self.grid.data[get_linear_index_unchecked(self.grid.size, index)].take() {
-                        Some(item) => break Some((index, item)),
-                        None => (),
+                    if let Some(item) = self.grid.data[get_linear_index_unchecked(self.grid.size, index)].take() {
+                        break Some((index, item))
                     }
                 }
             }

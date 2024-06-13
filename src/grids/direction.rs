@@ -25,21 +25,21 @@ impl Direction {
     pub const fn rotated(self, rotation: Rotation) -> Direction {
         match (self, rotation) {
             (Direction::E, Rotation::None) => Direction::E,
-            (Direction::E, Rotation::CCW) => Direction::N,
+            (Direction::E, Rotation::CounterClockwise) => Direction::N,
             (Direction::E, Rotation::Half) => Direction::W,
-            (Direction::E, Rotation::CW) => Direction::S,
+            (Direction::E, Rotation::Clockwise) => Direction::S,
             (Direction::N, Rotation::None) => Direction::N,
-            (Direction::N, Rotation::CCW) => Direction::W,
+            (Direction::N, Rotation::CounterClockwise) => Direction::W,
             (Direction::N, Rotation::Half) => Direction::S,
-            (Direction::N, Rotation::CW) => Direction::E,
+            (Direction::N, Rotation::Clockwise) => Direction::E,
             (Direction::W, Rotation::None) => Direction::W,
-            (Direction::W, Rotation::CCW) => Direction::S,
+            (Direction::W, Rotation::CounterClockwise) => Direction::S,
             (Direction::W, Rotation::Half) => Direction::E,
-            (Direction::W, Rotation::CW) => Direction::N,
+            (Direction::W, Rotation::Clockwise) => Direction::N,
             (Direction::S, Rotation::None) => Direction::S,
-            (Direction::S, Rotation::CCW) => Direction::E,
+            (Direction::S, Rotation::CounterClockwise) => Direction::E,
             (Direction::S, Rotation::Half) => Direction::N,
-            (Direction::S, Rotation::CW) => Direction::W,
+            (Direction::S, Rotation::Clockwise) => Direction::W,
         }
     }
 

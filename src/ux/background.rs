@@ -21,6 +21,14 @@ struct BackgroundData {
     rotation_t: f32
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct BackgroundAnimationDrawData {
+    pub index: GridIndex,
+    pub center: Pos2,
+    pub scale: f32,
+    pub show_hint: bool,
+}
+
 impl BackgroundAnimation {
     const SWAP_GLOW_LOSS: f32 = 2.0;
     const STOP_GLOW_LOSS: f32 = 2.0;
@@ -56,15 +64,15 @@ impl BackgroundAnimation {
             (data.rotation_glow - dt * Self::ROTATION_GLOW_LOSS).max(0.0)
         };
         data.last_rotation_color = match rotation {
-            Rotation::CCW => Some(Color::CCW),
-            Rotation::CW => Some(Color::CW),
+            Rotation::CounterClockwise => Some(Color::CCW),
+            Rotation::Clockwise => Some(Color::CW),
             _ => data.last_rotation_color
         };
         let drotation = dt * Self::ROTATION_SPEED;
-        let direction = if rotation == Rotation::CCW {
+        let direction = if rotation == Rotation::CounterClockwise {
             Some(-1.0)
         }
-        else if rotation == Rotation::CW {
+        else if rotation == Rotation::Clockwise {
             Some(1.0)
         }
         else if rotation == Rotation::None && data.rotation_t > drotation && data.rotation_t < 1.0 - drotation {
@@ -88,7 +96,8 @@ impl BackgroundAnimation {
         }
     }
 
-    pub fn draw_background_cell(&mut self, painter: &Painter, palette: &Palette, index: GridIndex, cell: &Cell, center: Pos2, scale: f32, show_hint: bool, dt: f32) {
+    pub fn draw_background_cell(&mut self, painter: &Painter, palette: &Palette, cell: &Cell, dt: f32, draw_data: BackgroundAnimationDrawData) {
+        let BackgroundAnimationDrawData { index, center, scale, show_hint } = draw_data;
         let data = self.data.get_mut(&index).unwrap();
         Self::update_cell(data, cell, dt);
 

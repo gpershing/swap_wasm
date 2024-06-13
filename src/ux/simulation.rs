@@ -64,14 +64,14 @@ impl Simulation {
 
                     segments.insert((index, direction), SimulationSegment { start_index, end_index });
 
-                    for i in start_index..(end_index-1) {
-                        cells[i].next = i + 1;
+                    for (i, cell) in cells.iter_mut().enumerate().take(end_index - 1).skip(start_index) {
+                        cell.next = i + 1;
                     }
                     cells[end_index - 1].next = end_index - 1;
                     
                     cells[start_index].previous = void_index;
-                    for i in (start_index+1)..end_index {
-                        cells[i].previous = i - 1;
+                    for (i,cell) in cells.iter_mut().enumerate().take(end_index).skip(start_index + 1) {
+                        cell.previous = i - 1;
                     }
 
                     if let Some(source) = cell.source() {
@@ -80,7 +80,7 @@ impl Simulation {
                     else {
                         let mut check_direction = direction;
                         for _ in 0..3 {
-                            check_direction = check_direction.rotated(Rotation::CCW);
+                            check_direction = check_direction.rotated(Rotation::CounterClockwise);
                             if layer.connections.contains(check_direction) {
                                 inner_connections.push((index, direction, check_direction));
                                 break;

@@ -42,7 +42,7 @@ fn create_grid_with_knockouts(generator_settings: &GeneratorSettings) -> Grid<()
     let mut positions: Vec<_> = grid.size().into_iter().collect();
 
     let mut knockouts = 0;
-    while knockouts < generator_settings.missing && positions.len() > 0 {
+    while knockouts < generator_settings.missing && !positions.is_empty() {
         if chance(generator_settings.missing_chance) {
             knockouts += 1;
             positions.swap_remove(random_index(positions.len()));
@@ -115,7 +115,7 @@ fn allocate_groups(grid: Grid<()>, generator_settings: &GeneratorSettings) -> Re
                 }
             },
         }
-        while possible_groups.len() > 0 {
+        while !possible_groups.is_empty() {
             let mut add = groups.len() < generator_settings.min_regions + 1;
             if !add { add = chance(generator_settings.extra_region_chance) }
             if !add { break }
@@ -125,7 +125,7 @@ fn allocate_groups(grid: Grid<()>, generator_settings: &GeneratorSettings) -> Re
         groups
     }
     let mut groups: Vec<_> = get_group_colors(generator_settings).into_iter()
-        .map(|color| Group::new(color))
+        .map(Group::new)
         .collect();
     let mut group_grid = Grid::with_size(grid.size());
     let mut intersections_left = generator_settings.max_intersections;
@@ -134,7 +134,7 @@ fn allocate_groups(grid: Grid<()>, generator_settings: &GeneratorSettings) -> Re
         groups.sort_by_cached_key(|_| rand::random::<u32>());
         groups.sort_by_key(|g| g.status());
         if let Some(group) = groups.last() {
-            let add = if group.present.len() == 0 {
+            let add = if group.present.is_empty() {
                 let position = grid.iter().map(|(p, _)| p).filter(|p| !group_grid.contains(*p)).choose(&mut rand::thread_rng()).unwrap();
                 Ok(position)
             }
@@ -184,11 +184,9 @@ fn allocate_groups(grid: Grid<()>, generator_settings: &GeneratorSettings) -> Re
                     group_grid.insert(position, GeneratorCell::SingleGroup(group.color)).unwrap();
                 }
             }
-            else {
-                if let Err(Some(failure)) = add {
-                    let group = groups.last_mut().unwrap();
-                    group.boundary.remove(&failure);
-                }
+            else if let Err(Some(failure)) = add {
+                let group = groups.last_mut().unwrap();
+                group.boundary.remove(&failure);
             }
         }
         else {

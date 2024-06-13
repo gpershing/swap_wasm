@@ -2,7 +2,7 @@ use egui::{emath::{self, RectTransform}, Button, EventFilter, Modifiers, Painter
 
 use crate::{gameplay::{Color, PlayingPuzzle, PuzzleSolveState, SwapRecord}, grids::GridIndex};
 
-use super::{background::BackgroundAnimation, cell::{draw_cell, CellDrawData}, palette::{self, Palette}, simulation::Simulation, swaps_left::{SwapsLeftAnimation, SwapsLeftDrawData}, SegmentMeshData};
+use super::{background::{BackgroundAnimation, BackgroundAnimationDrawData}, cell::{draw_cell, CellDrawData}, palette::{self, Palette}, simulation::Simulation, swaps_left::{SwapsLeftAnimation, SwapsLeftDrawData}, SegmentMeshData};
 
 pub enum GameCompletionAction {
     Reset,
@@ -87,12 +87,6 @@ impl GameInput {
     }
 }
 
-impl Default for GameInput {
-    fn default() -> Self {
-        GameInput::None
-    }
-}
-
 enum GameInputResponse {
     None,
     Down(Option<GridIndex>),
@@ -147,8 +141,7 @@ fn update_input(input: &mut GameInput, ui: &Ui, response: Response, puzzle: &Pla
             *input = GameInput::None;
         }
     }
-    return GameInputResponse::None;
-    
+    GameInputResponse::None
 }
 
 struct ControlsResponse {
@@ -163,10 +156,9 @@ fn control_button(ui: &mut Ui, palette: &Palette, name: impl Into<String>, disab
     if highlight {
         button = button.fill(palette.get(Color::SWAP).linear_multiply(0.33));
     }
-    let response = ui.vertical_centered_justified(move |ui|
+    ui.vertical_centered_justified(move |ui|
         ui.add_enabled(!disabled, button)
-    ).inner.clicked();
-    response
+    ).inner.clicked()
 }
 
 fn draw_controls(ui: &mut Ui, palette: &Palette, show_hint: bool, solved: bool) -> ControlsResponse {
@@ -186,15 +178,12 @@ fn draw_controls(ui: &mut Ui, palette: &Palette, show_hint: bool, solved: bool) 
 
 fn handle_events(ui: &Ui, controls: &mut ControlsResponse) {
     let events = ui.input(|i| i.filtered_events(&EventFilter::default()));
-    controls.undo = controls.undo || events.iter().any(|e| match e {
-        egui::Event::Key {
-            key: egui::Key::Z,
-            pressed: true,
-            modifiers,
-            ..
-        } if modifiers.matches_logically(Modifiers::COMMAND) => true,
-        _ => false
-    });
+    controls.undo = controls.undo || events.iter().any(|e| matches!(e, egui::Event::Key {
+        key: egui::Key::Z,
+        pressed: true,
+        modifiers,
+        ..
+    } if modifiers.matches_logically(Modifiers::COMMAND)));
 }
 
 fn handle_controls(controls: ControlsResponse, puzzle: &mut PlayingPuzzle, state: &mut GameState, puzzle_state: &mut PuzzleState) -> Option<GameCompletionAction> {
@@ -346,7 +335,12 @@ fn update_game_after_sizing(
     for (grid_pos, cell) in puzzle.iter_cells() {
         let center = to_screen * Pos2 { x: grid_pos.x as f32, y: grid_pos.y as f32 };
         let show_hint = puzzle_state.hint_shown && puzzle.puzzle().hint() == grid_pos && puzzle.swaps_made() == 0;
-        state.backgound_animation.draw_background_cell(&painter, palette, grid_pos, cell, center, cell_size, show_hint, dt);
+        state.backgound_animation.draw_background_cell(&painter, palette, cell, dt, BackgroundAnimationDrawData {
+            index: grid_pos,
+            center,
+            scale: cell_size,
+            show_hint, 
+        });
     }
 
     for (grid_pos, cell) in puzzle.iter_cells() {

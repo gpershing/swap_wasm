@@ -42,7 +42,7 @@ impl PuzzleCell {
                 [Some(connections.map(|c| c == LayerConnection::Layer0)),
                 Some(connections.map(|c| c == LayerConnection::Layer1))]
             }
-        }.into_iter().filter_map(std::convert::identity)
+        }.into_iter().flatten()
     }
 
     pub fn total_connections(&self) -> usize {

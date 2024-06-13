@@ -97,23 +97,23 @@ impl GameGrid for Grid<Cell> {
             }
             false
         }
-        if has_duplicate_fill(&self) { return GridSolveState::DuplicateColorSection }
+        if has_duplicate_fill(self) { return GridSolveState::DuplicateColorSection }
 
-        return GridSolveState::Solved;
+        GridSolveState::Solved
     }
 
     fn get_layer(&self, index: GameGridIndex) -> Option<&CellLayer> {
         let cell = self.get(index.grid_index)?;
-        cell.get_layer(index.layer_index.into())
+        cell.get_layer(index.layer_index)
     }
 
     fn get_layer_mut(&mut self, index: GameGridIndex) -> Option<&mut CellLayer> {
         let cell = self.get_mut(index.grid_index)?;
-        cell.get_layer_mut(index.layer_index.into())
+        cell.get_layer_mut(index.layer_index)
     }
 
     fn swap_with_rotation(&mut self, a: GridIndex, b: GridIndex) -> Option<SwapRecord> {
-        match can_swap(&self, a, b) {
+        match can_swap(self, a, b) {
             true => {
                 let a_rotation: Rotation;
                 let b_rotation: Rotation;
@@ -155,10 +155,9 @@ impl GameGrid for Grid<Cell> {
 
     fn iter_layers(&self) -> impl Iterator<Item = (GameGridIndex, &CellLayer)> {
         self.iter()
-            .map(|c| c.1.iter_layers()
+            .flat_map(|c| c.1.iter_layers()
                 .enumerate()
                 .map(move |(idx, layer)| (GameGridIndex { grid_index: c.0, layer_index: idx }, layer)))
-            .flatten()
     }
 
     fn iter_layers_at(&self, index: GridIndex) -> Option<impl Iterator<Item = (GameGridIndex, &CellLayer)>> {
@@ -177,7 +176,7 @@ impl GameGrid for Grid<Cell> {
     }
 
     fn all_connected(&self, index: GameGridIndex) -> Option<HashSet<GameGridIndex>> {
-        if self.get(index.grid_index).is_none() { return None }
+        _ = self.get(index.grid_index)?;
         let mut explored = HashSet::new();
         let mut to_explore = Vec::new();
         to_explore.push(index);

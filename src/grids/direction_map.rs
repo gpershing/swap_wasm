@@ -73,10 +73,10 @@ impl<T> DirectionMap<T> where T : Copy {
 
     pub fn rotated(&self, rotation: Rotation) -> Self {
         match rotation {
-            Rotation::None => self.clone(),
-            Rotation::CCW => Self { data: [self.data[3], self.data[0], self.data[1], self.data[2]] },
+            Rotation::None => *self,
+            Rotation::CounterClockwise => Self { data: [self.data[3], self.data[0], self.data[1], self.data[2]] },
             Rotation::Half => Self { data: [self.data[2], self.data[3], self.data[0], self.data[1]] },
-            Rotation::CW => Self { data: [self.data[1], self.data[2], self.data[3], self.data[0]] },
+            Rotation::Clockwise => Self { data: [self.data[1], self.data[2], self.data[3], self.data[0]] },
         }
     }
 }

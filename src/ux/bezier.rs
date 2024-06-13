@@ -41,7 +41,7 @@ pub fn generate_lut(curve: [Pos2; 4], steps: usize) -> Vec<Pos2> {
     (0..=steps).map(|step| compute(curve, (step as f32) * s_inv)).collect()
 }
 
-pub fn get_length_from_lut(lut: &Vec<Pos2>) -> f32 {
+pub fn get_length_from_lut(lut: &[Pos2]) -> f32 {
     lut.iter().skip(1).fold((0.0, lut[0]), |(acc, prev), next| {
         (acc + prev.distance(*next), *next)
     }).0
@@ -63,7 +63,7 @@ pub struct CubicBezierMesh {
 // 3 7 11
 fn sewn_triangles_with_feathering(len: u32) -> impl Iterator<Item = [u32; 3]> {
     let column_count = (len - 4) / 4;
-    (0..column_count).map(|col_idx| {
+    (0..column_count).flat_map(|col_idx| {
         let base = col_idx * 4;
         [
             [base, base + 1, base + 4],
@@ -73,7 +73,7 @@ fn sewn_triangles_with_feathering(len: u32) -> impl Iterator<Item = [u32; 3]> {
             [base + 2, base + 3, base + 6],
             [base + 3, base + 7, base + 6]
         ]
-    }).flatten()
+    })
 }
 
 impl CubicBezierMesh {
@@ -89,7 +89,7 @@ impl CubicBezierMesh {
             beziers.push([curve[idx - 1].point, curve[idx - 1].point + curve[idx - 1].handle_out(), curve[idx].point + curve[idx].handle_in(), curve[idx].point]);
         }
         let mut luts: Vec<_> = beziers.iter().map(|c| generate_lut(*c, LUT_LEN)).collect();
-        let lengths: Vec<_> = luts.iter().map(get_length_from_lut).collect();
+        let lengths: Vec<_> = luts.iter().map(|lut| get_length_from_lut(lut)).collect();
         let total_length: f32 = lengths.iter().sum();
         let total_length_inv = 1.0 / total_length;
 

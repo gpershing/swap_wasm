@@ -26,7 +26,7 @@ pub fn draw_cell(cell: &Cell, painter: &Painter, data: CellDrawData<'_>) {
             draw_simple(layers[1], None, painter, data);
         }
         else if layers[1].connections.is_empty() {
-            draw_simple(layers[1], None, painter, data);
+            draw_simple(layers[0], None, painter, data);
         }
         else {
             draw_intersection(layers[0], layers[1], painter, data);
@@ -53,7 +53,7 @@ fn draw_swap_source(painter: &Painter, data: CellDrawData<'_>) {
     let fill = Color32::TRANSPARENT;
     let stroke = Stroke::new(0.01 * data.size, data.palette.get(Color::SWAP));
     painter.extend((0..6).map(|i| (i as f32 + 0.5) * TAU / 6.0)
-        .map(|theta| {
+        .flat_map(|theta| {
             let end = data.center + Vec2::angled(theta) * data.size * 0.09;
             let tan = Vec2::angled(theta + TAU * 0.25) * data.size * 0.025;
             [
@@ -70,8 +70,7 @@ fn draw_swap_source(painter: &Painter, data: CellDrawData<'_>) {
                     data.center
                 ], closed, fill, stroke })
             ]
-        })
-        .flatten());
+        }));
 }
 
 fn draw_source(source: Color, painter: &Painter, data: CellDrawData<'_>) {
@@ -88,7 +87,7 @@ fn draw_source(source: Color, painter: &Painter, data: CellDrawData<'_>) {
 
 fn draw_simple(layer: &CellLayer, source: Option<Color>, painter: &Painter, data: CellDrawData<'_>) {
     let connections: Vec<_> = layer.connections.iter_set().collect();
-    if connections.len() == 0 {
+    if connections.is_empty() {
         let color = source.map(|s| data.palette.get(s)).unwrap_or(data.palette.empty);
         for r in 0..8 {
             let rotation = (r as f32) * TAU * 0.125;
@@ -202,7 +201,7 @@ fn draw_simple(layer: &CellLayer, source: Option<Color>, painter: &Painter, data
                 x: (point.x * cos + point.y * sin) * data.size + data.center.x,
                 y: (point.x * -sin + point.y * cos) * data.size + data.center.y
             };
-            painter.add(Shape::Mesh(data.mesh_data.l0.get_mesh(transform, data.simulation.color_fn_through_two((data.index, direction), (data.index, direction.rotated(crate::grids::Rotation::CW))) )));
+            painter.add(Shape::Mesh(data.mesh_data.l0.get_mesh(transform, data.simulation.color_fn_through_two((data.index, direction), (data.index, direction.rotated(crate::grids::Rotation::Clockwise))) )));
             std::mem::swap(&mut cos, &mut sin);
             cos = -cos;
         }
@@ -262,10 +261,8 @@ pub fn draw_intersection_layer(layer: &CellLayer, other_layer: &CellLayer, is_la
                     if other_layer.connections.contains(Direction::N) { (TAU * 0.5, Direction::W) }
                     else { (0.0, Direction::E) }
                 }
-                else {
-                    if other_layer.connections.contains(Direction::W) { (TAU * 0.75, Direction::S) }
-                    else { (TAU * 0.25, Direction::N) }
-                };
+                else if other_layer.connections.contains(Direction::W) { (TAU * 0.75, Direction::S) }
+                else { (TAU * 0.25, Direction::N) };
                 let dir2 = dir1.inverse();
                 let cos = rotation.cos();
                 let sin = rotation.sin();

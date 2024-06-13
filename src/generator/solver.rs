@@ -10,9 +10,8 @@ fn get_possible_swaps(grid: &Grid<Cell>) -> Vec<SwapRecord> {
     let entries: Vec<_> = grid.iter().collect();
     let mut swaps = Vec::new();
     for i in 0..(entries.len() - 1) {
-        let entry_i = entries[i];
-        for j in (i+1)..entries.len() {
-            let entry_j = entries[j];
+        let entry_i = &entries[i];
+        for entry_j in entries.iter().skip(i+1) {
             if Cell::can_swap(entry_i.1, entry_j.1) {
                 swaps.push(SwapRecord::new(entry_i.0, entry_j.0, entry_i.1.rotation_for_fill(), entry_j.1.rotation_for_fill()));
             }

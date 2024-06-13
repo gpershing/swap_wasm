@@ -22,7 +22,7 @@ fn draw_swap_indicator_with_color(painter: &Painter, center: Pos2, t: f32, color
     let stroke = Stroke::new(0.015 * size, color);
     let max = if t >= 0.99 { 1 } else { 6 };
     painter.extend((0..max).map(|i| (i as f32 * (1.0 - t)) * TAU / 6.0 + TAU / 4.0)
-        .map(|theta| {
+        .flat_map(|theta| {
             let end = center + Vec2::angled(theta) * size * 0.09;
             let tan = Vec2::angled(theta + TAU * 0.25) * size * 0.025;
             [
@@ -39,8 +39,7 @@ fn draw_swap_indicator_with_color(painter: &Painter, center: Pos2, t: f32, color
                     center
                 ], closed, fill, stroke })
             ]
-        })
-        .flatten());
+        }));
 }
 
 fn draw_swap_indicator(painter: &Painter, center: Pos2, t: f32, data: &SwapsLeftDrawData<'_>) {
