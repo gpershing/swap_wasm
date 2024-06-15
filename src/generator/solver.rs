@@ -22,7 +22,14 @@ fn get_possible_swaps(grid: &Grid<Cell>) -> Vec<SwapRecord> {
 
 pub fn find_solution(puzzle: &Puzzle, maximum_swaps: u8) -> Option<Vec<SwapRecord>> {
     let mut grid = Grid::from_puzzle_grid(puzzle.start());
-    if let Some(mut reverse_sol) = find_solution_from_grid(&mut grid, maximum_swaps) {
+    grid.fill();
+    if grid.is_solved() == GridSolveState::Solved {
+        Some(vec![])
+    }
+    else if maximum_swaps == 0 {
+        None
+    }
+    else if let Some(mut reverse_sol) = find_solution_from_grid(&mut grid, maximum_swaps) {
         reverse_sol.reverse();
         Some(reverse_sol)
     }

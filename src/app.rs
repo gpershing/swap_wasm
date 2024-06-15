@@ -1,14 +1,17 @@
-use crate::{gameplay::{fallback_puzzle, PlayingPuzzle, Puzzle}, generator::{generate_puzzle, GeneratorSettings}, grids::GridSize, ux::{update_game, GameState, GameStyle, PuzzleState, SegmentMeshData}};
+use crate::{gameplay::{fallback_puzzle, PlayingPuzzle, Puzzle}, generator::{generate_puzzle, GeneratorSettings}, ux::{edit_generator_settings, update_game, GameState, GameStyle, PuzzleState, SegmentMeshData}};
 
 pub struct App {
     puzzle: PlayingPuzzle,
     puzzle_state: PuzzleState,
     game_state: GameState,
-    mesh_data: SegmentMeshData
+    mesh_data: SegmentMeshData,
+    custom_generator_settings: GeneratorSettings,
+    editing_generator_settings: bool
 }
 
 const PUZZLE_KEY: &str = "swap_puzzle";
 const PUZZLE_STATE_KEY: &str = "swap_puzzle_state";
+const CUSTOM_SETTINGS_KEY: &str = "swap_custom_settings";
 
 impl App {
     /// Called once before the first frame.
@@ -26,11 +29,17 @@ impl App {
             .unwrap_or_default();
         let game_state = GameState::new(&puzzle);
 
+        let custom_generator_settings = cc.storage
+            .and_then(|storage| eframe::get_value(storage, CUSTOM_SETTINGS_KEY))
+            .unwrap_or_default();
+
         Self {
             puzzle,
             puzzle_state,
             game_state,
-            mesh_data: SegmentMeshData::init(0.03, 0.02, 0.04)
+            mesh_data: SegmentMeshData::init(0.03, 0.02, 0.04),
+            custom_generator_settings,
+            editing_generator_settings: false
         }
     }
 }
@@ -56,6 +65,7 @@ impl eframe::App for App {
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, PUZZLE_KEY, &self.puzzle);
         eframe::set_value(storage, PUZZLE_STATE_KEY, &self.puzzle_state);
+        eframe::set_value(storage, CUSTOM_SETTINGS_KEY, &self.custom_generator_settings);
     }
 
     /// Called each time the UI needs repainting, which may be many times per second.
@@ -81,6 +91,9 @@ impl eframe::App for App {
                     if ui.button("Debug").clicked() {
                         self.set_puzzle(crate::gameplay::debug_puzzle::debug_puzzle());
                     }
+                    if ui.button("Settings").clicked() {
+                        self.editing_generator_settings = true;
+                    }
                 });
 
                 egui::widgets::global_dark_light_mode_buttons(ui);
@@ -97,7 +110,8 @@ impl eframe::App for App {
                 if let Some(response) = response {
                     match response {
                         crate::ux::GameCompletionAction::Reset => self.reset_puzzle(),
-                        crate::ux::GameCompletionAction::Next => self.set_puzzle(generate_puzzle(&GeneratorSettings {
+                        /*
+                        &GeneratorSettings {
                             stop_sources: crate::generator::SourceSettings::Maybe,
                             rotator_sources: crate::generator::SourceSettings::Definitely,
                             size: GridSize { width: 4, height: 4 },
@@ -108,28 +122,14 @@ impl eframe::App for App {
                             check_solution_len: 3,
                             check_solution_retries: 1,
                             ..Default::default()
-                        })),
+                        }
+                         */
+                        crate::ux::GameCompletionAction::Next => self.set_puzzle(generate_puzzle(&self.custom_generator_settings)),
                     }
                 }
             });
-            // self.game.ui(ui);
 
-            // ui.horizontal(|ui| {
-            //     ui.label("Write something: ");
-            //     ui.text_edit_singleline(&mut self.label);
-            // });
-
-            // ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
-            // if ui.button("Increment").clicked() {
-            //     self.value += 1.0;
-            // }
-
-            // ui.separator();
-
-            // ui.add(egui::github_link_file!(
-            //     "https://github.com/emilk/eframe_template/blob/main/",
-            //     "Source code."
-            // ));
+            edit_generator_settings(ctx, &mut self.custom_generator_settings, &mut self.editing_generator_settings);
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 powered_by_egui_and_eframe(ui);

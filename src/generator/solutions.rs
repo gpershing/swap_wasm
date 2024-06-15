@@ -47,6 +47,9 @@ fn create_grid_with_knockouts(generator_settings: &GeneratorSettings) -> Grid<()
             knockouts += 1;
             positions.swap_remove(random_index(positions.len()));
         }
+        else {
+            break
+        }
     }
 
     for position in positions {
@@ -129,7 +132,7 @@ fn allocate_groups(grid: Grid<()>, generator_settings: &GeneratorSettings) -> Re
         .collect();
     let mut group_grid = Grid::with_size(grid.size());
     let mut intersections_left = generator_settings.max_intersections;
-    
+
     while group_grid.len() < grid.len() {
         groups.sort_by_cached_key(|_| rand::random::<u32>());
         groups.sort_by_key(|g| g.status());

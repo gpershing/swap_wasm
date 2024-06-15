@@ -6,5 +6,7 @@ mod simulation;
 mod background;
 mod palette;
 mod swaps_left;
+mod settings_editor;
 pub use game::{GameState, GameStyle, update_game, GameCompletionAction, PuzzleState};
 pub use mesh_data::SegmentMeshData;
+pub use settings_editor::edit_generator_settings;
