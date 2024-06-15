@@ -47,7 +47,7 @@ fn find_solution_from_grid(grid: &mut Grid<Cell>, swaps_left: u8) -> Option<Vec<
             }
         };
 
-        swap_without_fill(grid, swap.a, Rotation::None, swap.b, Rotation::None);
+        swap_without_fill(grid, swap.a, swap.b_rotation.inverse(), swap.b, swap.a_rotation.inverse());
     }
     None
 }

@@ -105,6 +105,8 @@ impl eframe::App for App {
                             max_intersections: 5,
                             intersection_chance: 0.25,
                             knockout_loop_chance: 0.9,
+                            check_solution_len: 3,
+                            check_solution_retries: 1,
                             ..Default::default()
                         })),
                     }
