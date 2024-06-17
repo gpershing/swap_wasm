@@ -2,9 +2,9 @@ use egui::{Context, Slider, Ui};
 
 use crate::generator::{GeneratorSettings, SourceSettings};
 
-pub fn edit_generator_settings(ctx: &Context, settings: &mut GeneratorSettings, open: &mut bool) {
+pub fn edit_generator_settings(ctx: &Context, use_settings: &mut bool, settings: &mut GeneratorSettings, open: &mut bool) {
     egui::Window::new("Generator settings")
-        .resizable([false, true])
+        .resizable([true, true])
         .constrain(true)
         .collapsible(true)
         .title_bar(true)
@@ -12,16 +12,20 @@ pub fn edit_generator_settings(ctx: &Context, settings: &mut GeneratorSettings, 
         .enabled(true)
         .open(open)
         .show(ctx, |ui| {
-            egui::Grid::new("generator_settings_grid")
+            ui.checkbox(use_settings, "Use custom generator");
+            ui.separator();
+            ui.add_enabled_ui(*use_settings, |ui| {
+                egui::Grid::new("generator_settings_grid")
                 .num_columns(2)
                 .striped(true)
                 .show(ui, |ui| edit_generator_settings_grid(ui, settings));
-            ui.separator();
-            ui.collapsing("Advanced", |ui| {
-                egui::Grid::new("generator_settings_advanced_grid")
-                    .num_columns(2)
-                    .striped(true)
-                    .show(ui, |ui| edit_advanced_settings_grid(ui, settings));
+                ui.separator();
+                ui.collapsing("Advanced", |ui| {
+                    egui::Grid::new("generator_settings_advanced_grid")
+                        .num_columns(2)
+                        .striped(true)
+                        .show(ui, |ui| edit_advanced_settings_grid(ui, settings));
+                });
             });
         });
 }

@@ -1,17 +1,19 @@
-use crate::{gameplay::{fallback_puzzle, PlayingPuzzle, Puzzle}, generator::{generate_puzzle, GeneratorSettings}, ux::{edit_generator_settings, update_game, GameState, GameStyle, PuzzleState, SegmentMeshData}};
+use crate::{gameplay::{fallback_puzzle, PlayingPuzzle, Puzzle}, generator::generate_puzzle, ux::{edit_generator_settings, update_game, GameState, GameStyle, PuzzleState, SegmentMeshData, SettingsConfig}};
 
 pub struct App {
     puzzle: PlayingPuzzle,
     puzzle_state: PuzzleState,
     game_state: GameState,
     mesh_data: SegmentMeshData,
-    custom_generator_settings: GeneratorSettings,
+
+    config: SettingsConfig,
+
     editing_generator_settings: bool
 }
 
 const PUZZLE_KEY: &str = "swap_puzzle";
 const PUZZLE_STATE_KEY: &str = "swap_puzzle_state";
-const CUSTOM_SETTINGS_KEY: &str = "swap_custom_settings";
+const SETTINGS_KEY: &str = "swap_settings";
 
 impl App {
     /// Called once before the first frame.
@@ -29,8 +31,8 @@ impl App {
             .unwrap_or_default();
         let game_state = GameState::new(&puzzle);
 
-        let custom_generator_settings = cc.storage
-            .and_then(|storage| eframe::get_value(storage, CUSTOM_SETTINGS_KEY))
+        let config = cc.storage
+            .and_then(|storage| eframe::get_value(storage, SETTINGS_KEY))
             .unwrap_or_default();
 
         Self {
@@ -38,7 +40,7 @@ impl App {
             puzzle_state,
             game_state,
             mesh_data: SegmentMeshData::init(0.03, 0.02, 0.04),
-            custom_generator_settings,
+            config,
             editing_generator_settings: false
         }
     }
@@ -65,7 +67,7 @@ impl eframe::App for App {
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, PUZZLE_KEY, &self.puzzle);
         eframe::set_value(storage, PUZZLE_STATE_KEY, &self.puzzle_state);
-        eframe::set_value(storage, CUSTOM_SETTINGS_KEY, &self.custom_generator_settings);
+        eframe::set_value(storage, SETTINGS_KEY, &self.config);
     }
 
     /// Called each time the UI needs repainting, which may be many times per second.
@@ -110,26 +112,14 @@ impl eframe::App for App {
                 if let Some(response) = response {
                     match response {
                         crate::ux::GameCompletionAction::Reset => self.reset_puzzle(),
-                        /*
-                        &GeneratorSettings {
-                            stop_sources: crate::generator::SourceSettings::Maybe,
-                            rotator_sources: crate::generator::SourceSettings::Definitely,
-                            size: GridSize { width: 4, height: 4 },
-                            swap_count: 4,
-                            max_intersections: 5,
-                            intersection_chance: 0.25,
-                            knockout_loop_chance: 0.9,
-                            check_solution_len: 3,
-                            check_solution_retries: 1,
-                            ..Default::default()
+                        crate::ux::GameCompletionAction::Skip | crate::ux::GameCompletionAction::Solved => {
+                            self.set_puzzle(generate_puzzle(&self.config.get_current_settings()));
                         }
-                         */
-                        crate::ux::GameCompletionAction::Next => self.set_puzzle(generate_puzzle(&self.custom_generator_settings)),
                     }
                 }
             });
 
-            edit_generator_settings(ctx, &mut self.custom_generator_settings, &mut self.editing_generator_settings);
+            edit_generator_settings(ctx, &mut self.config.custom_override, &mut self.config.custom_settings, &mut self.editing_generator_settings);
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 powered_by_egui_and_eframe(ui);

@@ -6,7 +6,8 @@ use super::{background::{BackgroundAnimation, BackgroundAnimationDrawData}, cell
 
 pub enum GameCompletionAction {
     Reset,
-    Next
+    Skip,
+    Solved
 }
 
 pub struct GameState {
@@ -204,7 +205,12 @@ fn handle_controls(controls: ControlsResponse, puzzle: &mut PlayingPuzzle, state
         Some(GameCompletionAction::Reset)
     }
     else if controls.skip {
-        Some(GameCompletionAction::Next)
+        Some(if puzzle_state.solved {
+            GameCompletionAction::Solved
+        }
+        else {
+            GameCompletionAction::Skip
+        })
     }
     else {
         None

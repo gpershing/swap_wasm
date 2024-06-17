@@ -1,5 +1,5 @@
 use rand::prelude::*;
-use crate::{gameplay::{Cell, Color, GameGrid, Puzzle, SwapRecord}, generator::solver::find_solution, grids::{Grid, GridIndex, GridSize, Rotation}};
+use crate::{gameplay::{Cell, Color, GameGrid, GridSolveState, Puzzle, SwapRecord}, generator::solver::find_solution, grids::{Grid, GridIndex, GridSize, Rotation}};
 
 use super::solutions::generate_solution;
 
@@ -103,6 +103,10 @@ fn try_generate_puzzle(generator_settings: &GeneratorSettings) -> Option<Puzzle>
         else {
             break;
         }
+    }
+
+    if Grid::from_puzzle_grid(puzzle.start().clone()).is_solved() == GridSolveState::Solved {
+        return None
     }
 
     Some(puzzle)
