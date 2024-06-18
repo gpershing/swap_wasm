@@ -1,6 +1,6 @@
 # SWAP
 
-This is a port of an iOS puzzle game I made to web/desktop using Rust, WebAssembly, and [egui](https://github.com/emilk/egui/).
+This is and iOS puzzle game I made, ported to web/desktop using Rust, WebAssembly, and [egui](https://github.com/emilk/egui/).
 
 It's a bit less polished than the app version. I made this as a way to preserve my work without relying on (and paying) Apple. I don't have plans to actively develop it at the moment, but I may return at some point to add a better generator, curated puzzles, ui improvements, etc.
 
