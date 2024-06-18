@@ -82,7 +82,7 @@ fn try_generate_puzzle(generator_settings: &GeneratorSettings) -> Option<Puzzle>
     let mut working_grid = Grid::from_puzzle_grid(solution_grid);
 
     let mut solution = reverse_solution(&mut working_grid, generator_settings.swap_count);
-    if solution.len() == 0 {
+    if solution.is_empty() {
         return None
     }
     println!("initial {:?}", solution);
@@ -94,7 +94,7 @@ fn try_generate_puzzle(generator_settings: &GeneratorSettings) -> Option<Puzzle>
         if let Some(shorter_solution) = find_solution(&puzzle, check as u8) {
             let remaining = reverse_solution(&mut working_grid, generator_settings.swap_count - shorter_solution.len() as u8);
             solution = [remaining, shorter_solution].concat();
-            if solution.len() == 0 {
+            if solution.is_empty() {
                 return None
             }
             puzzle = create_puzzle_from_grid(&mut working_grid, solution.len() as u8, solution.first().copied().unwrap());

@@ -1,20 +1,11 @@
 use crate::{generator::{GeneratorSettings, SourceSettings}, grids::GridSize};
 use rand::Rng;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct SettingsConfig {
     pub custom_override: bool,
     pub custom_settings: GeneratorSettings
-}
-
-impl Default for SettingsConfig {
-    fn default() -> Self {
-        Self {
-            custom_override: false,
-            custom_settings: GeneratorSettings::default()
-        }
-    }
 }
 
 struct Odds<T> {
@@ -106,7 +97,7 @@ impl SettingsConfig {
             intersection_chance: rng.gen_range(0.0..0.8),
             max_intersections: rng.gen_range(0..(size.width * size.height * 2 / 3)),
 
-            knockout_loop_chance: 0.99 - rng.gen_range((0.0f32)..0.5).powi(2),
+            knockout_loop_chance: 0.99 - rng.gen_range(0.0f32..0.5).powi(2),
 
             check_solution_len: (swap_count - 1).min(3) as usize,
             check_solution_retries: 3,
