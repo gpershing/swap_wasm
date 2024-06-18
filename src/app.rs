@@ -1,4 +1,4 @@
-use crate::{gameplay::{fallback_puzzle, PlayingPuzzle, Puzzle}, generator::generate_puzzle, ux::{edit_generator_settings, update_game, GameState, GameStyle, PuzzleState, SegmentMeshData, SettingsConfig}};
+use crate::{gameplay::{fallback_puzzle, PlayingPuzzle, Puzzle}, generator::generate_puzzle, ux::{edit_generator_settings, tutorial_window, update_game, GameState, GameStyle, PuzzleState, SegmentMeshData, SettingsConfig}};
 
 pub struct App {
     puzzle: PlayingPuzzle,
@@ -8,7 +8,8 @@ pub struct App {
 
     config: SettingsConfig,
 
-    editing_generator_settings: bool
+    editing_generator_settings: bool,
+    showing_tutorial: bool
 }
 
 const PUZZLE_KEY: &str = "swap_puzzle";
@@ -41,7 +42,8 @@ impl App {
             game_state,
             mesh_data: SegmentMeshData::init(0.03, 0.02, 0.04),
             config,
-            editing_generator_settings: false
+            editing_generator_settings: false,
+            showing_tutorial: false
         }
     }
 }
@@ -89,14 +91,12 @@ impl eframe::App for App {
                     });
                     ui.add_space(16.0);
                 }
-                ui.menu_button("DEBUG", |ui| {
-                    if ui.button("Debug").clicked() {
-                        self.set_puzzle(crate::gameplay::debug_puzzle::debug_puzzle());
-                    }
-                    if ui.button("Settings").clicked() {
-                        self.editing_generator_settings = true;
-                    }
-                });
+                if ui.button("How to play...").clicked() {
+                    self.showing_tutorial = true;
+                }
+                if ui.button("Custom generator...").clicked() {
+                    self.editing_generator_settings = true;
+                }
 
                 egui::widgets::global_dark_light_mode_buttons(ui);
             });
@@ -120,6 +120,8 @@ impl eframe::App for App {
             });
 
             edit_generator_settings(ctx, &mut self.config.custom_override, &mut self.config.custom_settings, &mut self.editing_generator_settings);
+
+            tutorial_window(ctx, &mut self.showing_tutorial);
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 powered_by_egui_and_eframe(ui);

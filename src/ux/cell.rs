@@ -48,41 +48,45 @@ fn tri_rotated(center: Pos2, radius: f32, rotation: f32) -> Vec<Pos2> {
         .collect()
 }
 
-fn draw_swap_source(painter: &Painter, data: CellDrawData<'_>) {
+fn draw_swap_source(painter: &Painter, center: Pos2, radius: f32, palette: &Palette) {
     let closed = false;
     let fill = Color32::TRANSPARENT;
-    let stroke = Stroke::new(0.01 * data.size, data.palette.get(Color::SWAP));
+    let stroke = Stroke::new(radius / 6.0, palette.get(Color::SWAP));
     painter.extend((0..6).map(|i| (i as f32 + 0.5) * TAU / 6.0)
         .flat_map(|theta| {
-            let end = data.center + Vec2::angled(theta) * data.size * 0.09;
-            let tan = Vec2::angled(theta + TAU * 0.25) * data.size * 0.025;
+            let end = center + Vec2::angled(theta) * radius;
+            let tan = Vec2::angled(theta + TAU * 0.25) * radius / 4.0;
             [
                 Shape::CubicBezier(CubicBezierShape { points: [
-                    data.center,
-                    data.center + tan,
+                    center,
+                    center + tan,
                     end + tan,
                     end
                 ], closed, fill, stroke }),
                 Shape::CubicBezier(CubicBezierShape { points: [
                     end,
                     end - tan,
-                    data.center - tan,
-                    data.center
+                    center - tan,
+                    center
                 ], closed, fill, stroke })
             ]
         }));
 }
 
-fn draw_source(source: Color, painter: &Painter, data: CellDrawData<'_>) {
+pub fn draw_source(painter: &Painter, source: Color, center: Pos2, radius: f32, palette: &Palette, animation_t: f32) {
     let rotator_speed: f32 = 1.0;
     match source {
-        Color::STOP => { painter.add(Shape::convex_polygon(octagon(data.center, data.size * 0.08), data.palette.get(source), Stroke::new(0.0, Color32::TRANSPARENT))); },
-        Color::CCW => { painter.add(Shape::convex_polygon(tri_rotated(data.center, data.size * 0.06, data.animation_t * -rotator_speed), Color32::TRANSPARENT, Stroke::new(data.size * 0.01, data.palette.get(source)))); },
-        Color::CW => { painter.add(Shape::convex_polygon(tri_rotated(data.center, data.size * 0.06, data.animation_t * rotator_speed), Color32::TRANSPARENT, Stroke::new(data.size * 0.01, data.palette.get(source)))); },
-        Color::Green => { painter.rect_stroke(Rect::from_center_size(data.center, Vec2::splat(data.size * 0.12)), 0.0, Stroke::new(data.size * 0.01, data.palette.get(source))); },
-        Color::Blue => { painter.circle_stroke(data.center, data.size * 0.06, Stroke::new(data.size * 0.01, data.palette.get(source))); },
-        Color::SWAP => draw_swap_source(painter, data)
+        Color::STOP => { painter.add(Shape::convex_polygon(octagon(center, radius * 1.1), palette.get(source), Stroke::new(0.0, Color32::TRANSPARENT))); },
+        Color::CCW => { painter.add(Shape::convex_polygon(tri_rotated(center, radius, animation_t * -rotator_speed), Color32::TRANSPARENT, Stroke::new(radius / 6.0, palette.get(source)))); },
+        Color::CW => { painter.add(Shape::convex_polygon(tri_rotated(center, radius, animation_t * rotator_speed), Color32::TRANSPARENT, Stroke::new(radius / 6.0, palette.get(source)))); },
+        Color::Green => { painter.rect_stroke(Rect::from_center_size(center, Vec2::splat(radius * 1.75)), 0.0, Stroke::new(radius / 6.0, palette.get(source))); },
+        Color::Blue => { painter.circle_stroke(center, radius, Stroke::new(radius / 6.0, palette.get(source))); },
+        Color::SWAP => draw_swap_source(painter, center, radius, palette)
     };
+}
+
+fn draw_source_for_data(source: Color, painter: &Painter, data: CellDrawData<'_>) {
+    draw_source(painter, source, data.center, data.size * 0.08, data.palette, data.animation_t);
 }
 
 fn draw_simple(layer: &CellLayer, source: Option<Color>, painter: &Painter, data: CellDrawData<'_>) {
@@ -207,7 +211,7 @@ fn draw_simple(layer: &CellLayer, source: Option<Color>, painter: &Painter, data
         }
     }
     if let Some(source) = source {
-        draw_source(source, painter, data);
+        draw_source_for_data(source, painter, data);
     }
 }
 

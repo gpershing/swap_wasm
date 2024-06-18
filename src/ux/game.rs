@@ -242,7 +242,7 @@ pub fn update_game(
 
     let center_x = painter.clip_rect().center().x;
     let game_size = Vec2::new(bounds.width as f32, bounds.height as f32) * cell_size;
-    let controls_size = Vec2::new(game_size.x - ui.spacing().item_spacing.x, CONTROLS_HEIGHT);
+    let controls_size = Vec2::new((game_size.x - ui.spacing().item_spacing.x).max(3.0 * cell_size).min(max_size.x - margin.sum().x), CONTROLS_HEIGHT);
     let controls_rect = Rect::from_center_size(Pos2 { x: center_x, y: painter.clip_rect().top() + controls_size.y * 0.5 }, controls_size);
     let game_rect = Rect::from_center_size(Pos2 { x: center_x, y: controls_rect.bottom() + game_size.y * 0.5 }, game_size);
     let indicators_size = Vec2::new(game_size.x, INDICATORS_HEIGHT);
