@@ -1,9 +1,8 @@
 use std::iter;
 
-use super::{grid_index::GridIndex, GridSize, Direction};
+use super::{grid_index::GridIndex, Direction, GridSize};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Grid<T> {
     data: Box<[Option<T>]>,
     size: GridSize,
@@ -22,8 +21,7 @@ impl std::error::Error for IndexOutOfSize {}
 const fn get_linear_index(size: GridSize, grid_index: GridIndex) -> Option<usize> {
     if size.contains(grid_index) {
         Some(grid_index.x + grid_index.y * size.width)
-    }
-    else {
+    } else {
         None
     }
 }
@@ -35,16 +33,21 @@ const unsafe fn get_linear_index_unchecked(size: GridSize, grid_index: GridIndex
 const fn get_index_from_linear_index(size: GridSize, linear_index: usize) -> GridIndex {
     GridIndex {
         x: linear_index % size.width,
-        y: linear_index / size.width
+        y: linear_index / size.width,
     }
 }
 
 impl<T> Grid<T> {
     pub fn with_size(size: GridSize) -> Self {
-        let data = iter::repeat_with(|| None).take(size.width * size.height)
+        let data = iter::repeat_with(|| None)
+            .take(size.width * size.height)
             .collect::<Vec<_>>()
             .into_boxed_slice();
-        Self { data, filled: 0, size }
+        Self {
+            data,
+            filled: 0,
+            size,
+        }
     }
 
     pub const fn size(&self) -> GridSize {
@@ -67,14 +70,18 @@ impl<T> Grid<T> {
         let li = get_linear_index(self.size, grid_index).ok_or(IndexOutOfSize)?;
         let previous = self.data[li].take();
         self.data[li] = Some(value);
-        if previous.is_none() { self.filled += 1 };
+        if previous.is_none() {
+            self.filled += 1
+        };
         Ok(previous)
     }
 
     pub fn remove(&mut self, grid_index: GridIndex) -> Result<Option<T>, IndexOutOfSize> {
         let li = get_linear_index(self.size, grid_index).ok_or(IndexOutOfSize)?;
         let previous = self.data[li].take();
-        if previous.is_some() { self.filled -= 1 };
+        if previous.is_some() {
+            self.filled -= 1
+        };
         Ok(previous)
     }
 
@@ -83,29 +90,30 @@ impl<T> Grid<T> {
     }
 
     pub fn get(&self, grid_index: GridIndex) -> Option<&T> {
-        get_linear_index(self.size, grid_index)
-            .and_then(|li| self.data[li].as_ref())
+        get_linear_index(self.size, grid_index).and_then(|li| self.data[li].as_ref())
     }
 
     pub unsafe fn get_unchecked(&self, grid_index: GridIndex) -> Option<&T> {
-        self.data.get_unchecked(get_linear_index_unchecked(self.size, grid_index))
+        self.data
+            .get_unchecked(get_linear_index_unchecked(self.size, grid_index))
             .as_ref()
     }
 
     pub fn get_mut(&mut self, grid_index: GridIndex) -> Option<&mut T> {
-        get_linear_index(self.size, grid_index)
-            .and_then(|li| self.data[li].as_mut())
+        get_linear_index(self.size, grid_index).and_then(|li| self.data[li].as_mut())
     }
 
     pub unsafe fn get_unchecked_mut(&mut self, grid_index: GridIndex) -> Option<&mut T> {
-        self.data.get_unchecked_mut(get_linear_index_unchecked(self.size, grid_index))
+        self.data
+            .get_unchecked_mut(get_linear_index_unchecked(self.size, grid_index))
             .as_mut()
     }
-    
+
     pub fn swap(&mut self, a: GridIndex, b: GridIndex) {
         self.data.swap(
-            get_linear_index(self.size, a).unwrap(), 
-            get_linear_index(self.size, b).unwrap())
+            get_linear_index(self.size, a).unwrap(),
+            get_linear_index(self.size, b).unwrap(),
+        )
     }
 
     pub fn indicies(&self) -> impl Iterator<Item = GridIndex> + '_ {
@@ -115,13 +123,17 @@ impl<T> Grid<T> {
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (GridIndex, &T)> + '_ {
-        self.data.iter().enumerate()
-            .filter_map(|(li, data)| data.as_ref().map(|d| (get_index_from_linear_index(self.size, li), d)))
+        self.data.iter().enumerate().filter_map(|(li, data)| {
+            data.as_ref()
+                .map(|d| (get_index_from_linear_index(self.size, li), d))
+        })
     }
 
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (GridIndex, &mut T)> + '_ {
-        self.data.iter_mut().enumerate()
-            .filter_map(|(li, data)| data.as_mut().map(|d| (get_index_from_linear_index(self.size, li), d)))
+        self.data.iter_mut().enumerate().filter_map(|(li, data)| {
+            data.as_mut()
+                .map(|d| (get_index_from_linear_index(self.size, li), d))
+        })
     }
 }
 
@@ -131,25 +143,45 @@ impl<T> Grid<T> {
         self.get(index).map(|item| (index, item))
     }
 
-    pub fn get_neighbor_mut(&mut self, index: GridIndex, direction: Direction) -> Option<(GridIndex, &mut T)> {
+    pub fn get_neighbor_mut(
+        &mut self,
+        index: GridIndex,
+        direction: Direction,
+    ) -> Option<(GridIndex, &mut T)> {
         let index = index.moved_in(direction)?;
         self.get_mut(index).map(|item| (index, item))
     }
 
-    pub fn iter_neighbors_for(&self, index: GridIndex, directions: impl Iterator<Item = Direction>) -> impl Iterator<Item = (GridIndex, Direction, &T)> {
-        directions.filter_map(move |dir| self.get_neighbor(index, dir).map(|(idx, item)| (idx, dir, item)))
+    pub fn iter_neighbors_for(
+        &self,
+        index: GridIndex,
+        directions: impl Iterator<Item = Direction>,
+    ) -> impl Iterator<Item = (GridIndex, Direction, &T)> {
+        directions.filter_map(move |dir| {
+            self.get_neighbor(index, dir)
+                .map(|(idx, item)| (idx, dir, item))
+        })
     }
 
-    pub fn iter_neighbors(&self, index: GridIndex) -> impl Iterator<Item = (GridIndex, Direction, &T)> {
+    pub fn iter_neighbors(
+        &self,
+        index: GridIndex,
+    ) -> impl Iterator<Item = (GridIndex, Direction, &T)> {
         self.iter_neighbors_for(index, Direction::ALL.into_iter())
     }
 
-    pub fn neighbors_mut_for(&mut self, index: GridIndex, directions: impl Iterator<Item = Direction>) -> impl Iterator<Item = (GridIndex, Direction, &mut T)> {
+    pub fn neighbors_mut_for(
+        &mut self,
+        index: GridIndex,
+        directions: impl Iterator<Item = Direction>,
+    ) -> impl Iterator<Item = (GridIndex, Direction, &mut T)> {
         let mut linear_indices: Vec<_> = directions
-            .filter_map(|dir| index
-                .moved_in(dir)
-                .and_then(|idx| get_linear_index(self.size, idx))
-                .map(|idx| (idx, index, dir)))
+            .filter_map(|dir| {
+                index
+                    .moved_in(dir)
+                    .and_then(|idx| get_linear_index(self.size, idx))
+                    .map(|idx| (idx, index, dir))
+            })
             .collect();
         linear_indices.sort_by(|a, b| a.0.cmp(&b.0));
 
@@ -165,14 +197,17 @@ impl<T> Grid<T> {
         refs.into_iter()
     }
 
-    pub fn neighbors_mut(&mut self, index: GridIndex) -> impl Iterator<Item = (GridIndex, Direction, &mut T)> {
+    pub fn neighbors_mut(
+        &mut self,
+        index: GridIndex,
+    ) -> impl Iterator<Item = (GridIndex, Direction, &mut T)> {
         self.neighbors_mut_for(index, Direction::ALL.into_iter())
     }
 }
 
 pub struct GridIter<T> {
     grid: Grid<T>,
-    index_iter: <GridSize as IntoIterator>::IntoIter
+    index_iter: <GridSize as IntoIterator>::IntoIter,
 }
 
 impl<T> Iterator for GridIter<T> {
@@ -182,13 +217,14 @@ impl<T> Iterator for GridIter<T> {
         loop {
             if let Some(index) = self.index_iter.next() {
                 unsafe {
-                    if let Some(item) = self.grid.data[get_linear_index_unchecked(self.grid.size, index)].take() {
-                        break Some((index, item))
+                    if let Some(item) =
+                        self.grid.data[get_linear_index_unchecked(self.grid.size, index)].take()
+                    {
+                        break Some((index, item));
                     }
                 }
-            }
-            else {
-                break None
+            } else {
+                break None;
             }
         }
     }
@@ -203,7 +239,7 @@ impl<T> IntoIterator for Grid<T> {
         let size = self.size;
         GridIter {
             grid: self,
-            index_iter: size.into_iter()
+            index_iter: size.into_iter(),
         }
     }
 }

@@ -1,16 +1,22 @@
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum Color {
     Red,
     Orange,
     Yellow,
     Green,
     Blue,
-    Purple
+    Purple,
 }
 
 impl Color {
-    pub const ALL: [Color; 6] = [Color::Red, Color::Orange, Color::Yellow, Color::Green, Color::Blue, Color::Purple];
+    pub const ALL: [Color; 6] = [
+        Color::Red,
+        Color::Orange,
+        Color::Yellow,
+        Color::Green,
+        Color::Blue,
+        Color::Purple,
+    ];
 
     pub const SWAP: Color = Color::Purple;
     pub const STOP: Color = Color::Red;

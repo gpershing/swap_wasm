@@ -2,19 +2,17 @@ use std::ops::{Index, IndexMut};
 
 use super::{Direction, Rotation};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub struct DirectionMapData<T> {
     pub e: T,
     pub n: T,
     pub w: T,
-    pub s: T
+    pub s: T,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub struct DirectionMap<T> {
-    data: [T; 4]
+    data: [T; 4],
 }
 
 pub type DirectionSet = DirectionMap<bool>;
@@ -34,7 +32,7 @@ const fn dir_for_idx(idx: usize) -> Direction {
         1 => Direction::N,
         2 => Direction::W,
         3 => Direction::S,
-        _ => panic!()
+        _ => panic!(),
     }
 }
 
@@ -54,18 +52,23 @@ impl<T> DirectionMap<T> {
     }
 
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (Direction, &mut T)> {
-        self.data.iter_mut().enumerate()
+        self.data
+            .iter_mut()
+            .enumerate()
             .map(|(idx, el)| (dir_for_idx(idx), el))
     }
 
     pub fn map<Other>(self, f: impl FnMut(T) -> Other) -> DirectionMap<Other> {
         DirectionMap {
-            data: self.data.map(f)
+            data: self.data.map(f),
         }
     }
 }
 
-impl<T> DirectionMap<T> where T : Copy {
+impl<T> DirectionMap<T>
+where
+    T: Copy,
+{
     pub fn new_with_repeat(value: T) -> Self {
         let data = [value; 4];
         Self { data }
@@ -74,9 +77,15 @@ impl<T> DirectionMap<T> where T : Copy {
     pub fn rotated(&self, rotation: Rotation) -> Self {
         match rotation {
             Rotation::None => *self,
-            Rotation::CounterClockwise => Self { data: [self.data[3], self.data[0], self.data[1], self.data[2]] },
-            Rotation::Half => Self { data: [self.data[2], self.data[3], self.data[0], self.data[1]] },
-            Rotation::Clockwise => Self { data: [self.data[1], self.data[2], self.data[3], self.data[0]] },
+            Rotation::CounterClockwise => Self {
+                data: [self.data[3], self.data[0], self.data[1], self.data[2]],
+            },
+            Rotation::Half => Self {
+                data: [self.data[2], self.data[3], self.data[0], self.data[1]],
+            },
+            Rotation::Clockwise => Self {
+                data: [self.data[1], self.data[2], self.data[3], self.data[0]],
+            },
         }
     }
 }

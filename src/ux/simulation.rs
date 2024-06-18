@@ -1,19 +1,25 @@
-use egui::{ahash::{HashMap, HashMapExt}, Color32};
+use egui::{
+    ahash::{HashMap, HashMapExt},
+    Color32,
+};
 
-use crate::{gameplay::{Cell, Color, FColor, SwapRecord}, grids::{Direction, Grid, GridIndex, Rotation}};
+use crate::{
+    gameplay::{Cell, Color, FColor, SwapRecord},
+    grids::{Direction, Grid, GridIndex, Rotation},
+};
 
 use super::palette::Palette;
 
 #[derive(Debug, Clone, Copy)]
 pub struct SimulationSegment {
     start_index: usize,
-    end_index: usize
+    end_index: usize,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct SimulationCell {
     previous: usize,
-    next: usize
+    next: usize,
 }
 
 pub struct Simulation {
@@ -28,7 +34,7 @@ pub struct Simulation {
 
     simulated_cell_count: usize,
     void_index: usize,
-    color_index_start: usize
+    color_index_start: usize,
 }
 
 impl Simulation {
@@ -45,9 +51,13 @@ impl Simulation {
         let void_index: usize = simulated_cell_count;
         let color_index_start = void_index + 1;
         let all_cell_count = color_index_start + Color::ALL.len();
-        
+
         let mut segments = HashMap::new();
-        let mut cells = [SimulationCell { previous: 0, next: 0 }].repeat(all_cell_count);
+        let mut cells = [SimulationCell {
+            previous: 0,
+            next: 0,
+        }]
+        .repeat(all_cell_count);
         let mut current = [[0.0; 6]].repeat(all_cell_count);
         let mut next = [[0.0; 6]].repeat(all_cell_count);
         let retain = [[1.0; 6]].repeat(simulated_cell_count);
@@ -62,22 +72,37 @@ impl Simulation {
                     let end_index = at + Self::SEGMENT_LENGTH;
                     at = end_index;
 
-                    segments.insert((index, direction), SimulationSegment { start_index, end_index });
+                    segments.insert(
+                        (index, direction),
+                        SimulationSegment {
+                            start_index,
+                            end_index,
+                        },
+                    );
 
-                    for (i, cell) in cells.iter_mut().enumerate().take(end_index - 1).skip(start_index) {
+                    for (i, cell) in cells
+                        .iter_mut()
+                        .enumerate()
+                        .take(end_index - 1)
+                        .skip(start_index)
+                    {
                         cell.next = i + 1;
                     }
                     cells[end_index - 1].next = end_index - 1;
-                    
+
                     cells[start_index].previous = void_index;
-                    for (i,cell) in cells.iter_mut().enumerate().take(end_index).skip(start_index + 1) {
+                    for (i, cell) in cells
+                        .iter_mut()
+                        .enumerate()
+                        .take(end_index)
+                        .skip(start_index + 1)
+                    {
                         cell.previous = i - 1;
                     }
 
                     if let Some(source) = cell.source() {
                         cells[end_index - 1].next = color_index_start + source.index();
-                    }
-                    else {
+                    } else {
                         let mut check_direction = direction;
                         for _ in 0..3 {
                             check_direction = check_direction.rotated(Rotation::CounterClockwise);
@@ -110,18 +135,38 @@ impl Simulation {
             next[index][color.index()] = Self::SOURCE;
         }
 
-        Self { t: 0.0, indices: cells, current, next, retain, current_colors, segments, simulated_cell_count, void_index, color_index_start }
+        Self {
+            t: 0.0,
+            indices: cells,
+            current,
+            next,
+            retain,
+            current_colors,
+            segments,
+            simulated_cell_count,
+            void_index,
+            color_index_start,
+        }
     }
 
     pub fn update_fill(&mut self, grid: &Grid<Cell>) {
         for (index, cell) in grid.iter() {
-            if cell.source().is_some() { continue; }
+            if cell.source().is_some() {
+                continue;
+            }
             for direction in Direction::ALL {
                 if let Some(segment) = self.segments.get(&(index, direction)) {
                     for i in segment.start_index..segment.end_index {
-                        let layer = cell.iter_layers().find(|layer| layer.connections.contains(direction)).unwrap();
+                        let layer = cell
+                            .iter_layers()
+                            .find(|layer| layer.connections.contains(direction))
+                            .unwrap();
                         for color in Color::ALL {
-                            self.retain[i][color.index()] = if layer.fill.contains(color) { 1.0 } else { Self::RETAIN_LOSS };
+                            self.retain[i][color.index()] = if layer.fill.contains(color) {
+                                1.0
+                            } else {
+                                Self::RETAIN_LOSS
+                            };
                         }
                     }
                 }
@@ -142,24 +187,36 @@ impl Simulation {
     }
 
     fn step_dt(&mut self, palette: &Palette) {
-        for (index, cell_indices) in self.indices.iter().enumerate().take(self.simulated_cell_count) {
+        for (index, cell_indices) in self
+            .indices
+            .iter()
+            .enumerate()
+            .take(self.simulated_cell_count)
+        {
             let mut sum = 0.0;
             for i in 0..6 {
-                self.next[index][i] = self.current[index][i] * self.retain[index][i] + (self.current[cell_indices.next][i] + self.current[cell_indices.previous][i] - 2.0 * self.current[index][i]) * Self::ALPHA * 0.5;
+                self.next[index][i] = self.current[index][i] * self.retain[index][i]
+                    + (self.current[cell_indices.next][i] + self.current[cell_indices.previous][i]
+                        - 2.0 * self.current[index][i])
+                        * Self::ALPHA
+                        * 0.5;
                 sum += self.next[index][i];
             }
             if sum <= 0.001 {
                 self.current_colors[index] = palette.empty_f();
-            }
-            else {
+            } else {
                 let sum_inv = 1.0 / sum;
                 let mut next_color = FColor::rgb(0.0, 0.0, 0.0);
                 for color in Color::ALL {
                     let t = self.next[index][color.index()].min(1.0);
-                    next_color += palette.get_fcolor(color) * (t * (2.0 - t)) * self.next[index][color.index()] * sum_inv;
+                    next_color += palette.get_fcolor(color)
+                        * (t * (2.0 - t))
+                        * self.next[index][color.index()]
+                        * sum_inv;
                 }
                 let empty_t = sum.min(1.0);
-                self.current_colors[index] = palette.empty_f() * (1.0 - empty_t) + next_color * empty_t;
+                self.current_colors[index] =
+                    palette.empty_f() * (1.0 - empty_t) + next_color * empty_t;
             }
         }
         std::mem::swap(&mut self.current, &mut self.next);
@@ -172,7 +229,9 @@ impl Simulation {
                     if let Some(fill_color) = layer.fill.iter().next() {
                         if let Some(segment) = self.segments.get(&(index, direction)) {
                             for i in segment.start_index..segment.end_index {
-                                self.current[i][fill_color.index()] = (self.current[i][fill_color.index()] + dt * Self::SOLVED_GAIN).min(Self::SOURCE);
+                                self.current[i][fill_color.index()] =
+                                    (self.current[i][fill_color.index()] + dt * Self::SOLVED_GAIN)
+                                        .min(Self::SOURCE);
                             }
                         }
                     }
@@ -209,7 +268,10 @@ impl Simulation {
 
     fn break_neighbor_connection_from(&mut self, index: GridIndex, direction: Direction) {
         if let Some(neighbor_index) = index.moved_in(direction) {
-            if let Some(cell) = self.segments.get_mut(&(neighbor_index, direction.inverse())) {
+            if let Some(cell) = self
+                .segments
+                .get_mut(&(neighbor_index, direction.inverse()))
+            {
                 self.indices[cell.start_index].previous = self.void_index;
             }
         }
@@ -217,7 +279,10 @@ impl Simulation {
 
     pub fn swap(&mut self, record: SwapRecord) {
         let mut to_add = HashMap::new();
-        for (index, rotation, new_index) in [(record.a, record.a_rotation, record.b), (record.b, record.b_rotation, record.a)] {
+        for (index, rotation, new_index) in [
+            (record.a, record.a_rotation, record.b),
+            (record.b, record.b_rotation, record.a),
+        ] {
             for unrotated_direction in Direction::ALL {
                 if let Some(segment) = self.segments.remove(&(index, unrotated_direction)) {
                     to_add.insert((new_index, unrotated_direction.rotated(rotation)), segment);
@@ -239,36 +304,58 @@ impl Simulation {
     }
 
     const fn void_segment(&self) -> SimulationSegment {
-        SimulationSegment { start_index: self.void_index, end_index: self.void_index + 1 }
-    }
-
-    pub fn color_fn_single(&self, a: (GridIndex, Direction)) -> impl Fn(f32) -> Color32 + '_ {
-        let cell = self.segments.get(&a).copied().unwrap_or(self.void_segment());
-        move |t| {
-            self.lerp(cell.start_index, cell.end_index, t)
+        SimulationSegment {
+            start_index: self.void_index,
+            end_index: self.void_index + 1,
         }
     }
 
-    pub fn color_fn_single_both_ways(&self, a: (GridIndex, Direction)) -> impl Fn(f32) -> Color32 + '_ {
-        let cell = self.segments.get(&a).copied().unwrap_or(self.void_segment());
+    pub fn color_fn_single(&self, a: (GridIndex, Direction)) -> impl Fn(f32) -> Color32 + '_ {
+        let cell = self
+            .segments
+            .get(&a)
+            .copied()
+            .unwrap_or(self.void_segment());
+        move |t| self.lerp(cell.start_index, cell.end_index, t)
+    }
+
+    pub fn color_fn_single_both_ways(
+        &self,
+        a: (GridIndex, Direction),
+    ) -> impl Fn(f32) -> Color32 + '_ {
+        let cell = self
+            .segments
+            .get(&a)
+            .copied()
+            .unwrap_or(self.void_segment());
         move |t| {
             if t > 0.5 {
                 self.lerp(cell.start_index, cell.end_index, 2.0 - t * 2.0)
-            }
-            else {
+            } else {
                 self.lerp(cell.start_index, cell.end_index, t * 2.0)
             }
         }
     }
 
-    pub fn color_fn_through_two(&self, a: (GridIndex, Direction), b: (GridIndex, Direction)) -> impl Fn(f32) -> Color32 + '_ {
-        let cell_a = self.segments.get(&a).copied().unwrap_or(self.void_segment());
-        let cell_b = self.segments.get(&b).copied().unwrap_or(self.void_segment());
+    pub fn color_fn_through_two(
+        &self,
+        a: (GridIndex, Direction),
+        b: (GridIndex, Direction),
+    ) -> impl Fn(f32) -> Color32 + '_ {
+        let cell_a = self
+            .segments
+            .get(&a)
+            .copied()
+            .unwrap_or(self.void_segment());
+        let cell_b = self
+            .segments
+            .get(&b)
+            .copied()
+            .unwrap_or(self.void_segment());
         move |t| {
             if t > 0.5 {
                 self.lerp(cell_b.start_index, cell_b.end_index, 2.0 - t * 2.0)
-            }
-            else {
+            } else {
                 self.lerp(cell_a.start_index, cell_a.end_index, t * 2.0)
             }
         }

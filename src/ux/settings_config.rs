@@ -1,15 +1,17 @@
-use crate::{generator::{GeneratorSettings, SourceSettings}, grids::GridSize};
+use crate::{
+    generator::{GeneratorSettings, SourceSettings},
+    grids::GridSize,
+};
 use rand::Rng;
 
-#[derive(Debug, Clone, Default)]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct SettingsConfig {
     pub custom_override: bool,
-    pub custom_settings: GeneratorSettings
+    pub custom_settings: GeneratorSettings,
 }
 
 struct Odds<T> {
-    data: Vec<(T, u32)>
+    data: Vec<(T, u32)>,
 }
 
 impl<T> Odds<T> {
@@ -22,7 +24,10 @@ impl<T> Odds<T> {
         self.data.push((entry, cumulative + weight));
     }
 
-    pub fn get<R>(&mut self, rng: &mut R) -> Option<&T> where R: rand::Rng + ?Sized {
+    pub fn get<R>(&mut self, rng: &mut R) -> Option<&T>
+    where
+        R: rand::Rng + ?Sized,
+    {
         let cumulative = self.data.last().map(|x| x.1)?;
         let cutoff = rng.next_u32() % cumulative;
         let index = self.data.partition_point(|entry| entry.1 < cutoff);
@@ -34,10 +39,13 @@ impl<T> Odds<T> {
 struct GridData {
     size: GridSize,
     missing: usize,
-    swap_count: u8
+    swap_count: u8,
 }
 
-fn get_random_grid_data<R>(rng: &mut R) -> GridData where R: rand::Rng + ?Sized {
+fn get_random_grid_data<R>(rng: &mut R) -> GridData
+where
+    R: rand::Rng + ?Sized,
+{
     let mut size_odds = Odds::new();
     size_odds.add((GridSize::new(2, 3), 1), 3);
     size_odds.add((GridSize::new(1, 4), 0), 6);
@@ -52,7 +60,7 @@ fn get_random_grid_data<R>(rng: &mut R) -> GridData where R: rand::Rng + ?Sized 
         0..=5 => 2,
         6..=7 => 3,
         8..=9 => 4,
-        10.. => 5
+        10.. => 5,
     };
 
     let mut swap_odds: Odds<u8> = Odds::new();
@@ -62,15 +70,18 @@ fn get_random_grid_data<R>(rng: &mut R) -> GridData where R: rand::Rng + ?Sized 
     swap_odds.add(par_swaps + 2, 3);
     let swap_count = *swap_odds.get(rng).unwrap();
 
-    GridData { size , missing, swap_count }
+    GridData {
+        size,
+        missing,
+        swap_count,
+    }
 }
 
 impl SettingsConfig {
     pub fn get_current_settings(&self) -> GeneratorSettings {
         if self.custom_override {
             self.custom_settings.clone()
-        }
-        else {
+        } else {
             self.get_random_settings()
         }
     }
@@ -78,7 +89,11 @@ impl SettingsConfig {
     fn get_random_settings(&self) -> GeneratorSettings {
         let rng = &mut rand::thread_rng();
 
-        let GridData { size, missing, swap_count } = get_random_grid_data(rng);
+        let GridData {
+            size,
+            missing,
+            swap_count,
+        } = get_random_grid_data(rng);
 
         GeneratorSettings {
             size,

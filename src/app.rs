@@ -1,4 +1,11 @@
-use crate::{gameplay::{fallback_puzzle, PlayingPuzzle, Puzzle}, generator::generate_puzzle, ux::{edit_generator_settings, tutorial_window, update_game, GameState, GameStyle, PuzzleState, SegmentMeshData, SettingsConfig}};
+use crate::{
+    gameplay::{fallback_puzzle, PlayingPuzzle, Puzzle},
+    generator::generate_puzzle,
+    ux::{
+        edit_generator_settings, tutorial_window, update_game, GameState, GameStyle, PuzzleState,
+        SegmentMeshData, SettingsConfig,
+    },
+};
 
 pub struct App {
     puzzle: PlayingPuzzle,
@@ -9,7 +16,7 @@ pub struct App {
     config: SettingsConfig,
 
     editing_generator_settings: bool,
-    showing_tutorial: bool
+    showing_tutorial: bool,
 }
 
 const PUZZLE_KEY: &str = "swap_puzzle";
@@ -19,15 +26,18 @@ const SETTINGS_KEY: &str = "swap_settings";
 impl App {
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        let puzzle = cc.storage
+        let puzzle = cc
+            .storage
             .and_then(|storage| eframe::get_value(storage, PUZZLE_KEY))
             .unwrap_or_else(|| PlayingPuzzle::play(fallback_puzzle()));
-        let puzzle_state = cc.storage
+        let puzzle_state = cc
+            .storage
             .and_then(|storage| eframe::get_value(storage, PUZZLE_STATE_KEY))
             .unwrap_or_default();
         let game_state = GameState::new(&puzzle);
 
-        let config = cc.storage
+        let config = cc
+            .storage
             .and_then(|storage| eframe::get_value(storage, SETTINGS_KEY))
             .unwrap_or_default();
 
@@ -38,7 +48,7 @@ impl App {
             mesh_data: SegmentMeshData::init(0.03, 0.02, 0.04),
             config,
             editing_generator_settings: false,
-            showing_tutorial: false
+            showing_tutorial: false,
         }
     }
 }
@@ -93,20 +103,31 @@ impl eframe::App for App {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.centered_and_justified(|ui| {
-                let response = update_game(ui, &mut self.puzzle, &mut self.game_state, &mut self.puzzle_state, &GameStyle {
-                    scale: 150.0
-                }, &self.mesh_data);
+                let response = update_game(
+                    ui,
+                    &mut self.puzzle,
+                    &mut self.game_state,
+                    &mut self.puzzle_state,
+                    &GameStyle { scale: 150.0 },
+                    &self.mesh_data,
+                );
                 if let Some(response) = response {
                     match response {
                         crate::ux::GameCompletionAction::Reset => self.reset_puzzle(),
-                        crate::ux::GameCompletionAction::Skip | crate::ux::GameCompletionAction::Solved => {
+                        crate::ux::GameCompletionAction::Skip
+                        | crate::ux::GameCompletionAction::Solved => {
                             self.set_puzzle(generate_puzzle(&self.config.get_current_settings()));
                         }
                     }
                 }
             });
 
-            edit_generator_settings(ctx, &mut self.config.custom_override, &mut self.config.custom_settings, &mut self.editing_generator_settings);
+            edit_generator_settings(
+                ctx,
+                &mut self.config.custom_override,
+                &mut self.config.custom_settings,
+                &mut self.editing_generator_settings,
+            );
 
             tutorial_window(ctx, &mut self.showing_tutorial);
 

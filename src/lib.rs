@@ -2,7 +2,7 @@
 
 mod app;
 mod gameplay;
-mod ux;
 mod generator;
 mod grids;
+mod ux;
 pub use app::App;

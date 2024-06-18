@@ -2,8 +2,7 @@ use crate::grids::{Grid, GridIndex, GridSize};
 
 use super::{game_grid::GridSolveState, Cell, GameGrid, Puzzle, SwapRecord};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(serde::Serialize, serde:: Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde:: Deserialize)]
 pub enum PuzzleSolveState {
     Solved,
     NotAllConnected,
@@ -17,13 +16,17 @@ pub enum PuzzleSolveState {
 pub struct PlayingPuzzle {
     puzzle: Puzzle,
     grid: Grid<Cell>,
-    history: Vec<SwapRecord>
+    history: Vec<SwapRecord>,
 }
 
 impl PlayingPuzzle {
     pub fn play(puzzle: Puzzle) -> Self {
         let grid = Grid::from_puzzle_grid(puzzle.start());
-        Self { puzzle, grid, history: Vec::new() }
+        Self {
+            puzzle,
+            grid,
+            history: Vec::new(),
+        }
     }
 
     pub const fn puzzle(&self) -> &Puzzle {
@@ -59,19 +62,17 @@ impl PlayingPuzzle {
             self.history.push(record);
             self.grid.fill();
             Some(record)
-        }
-        else {
+        } else {
             None
         }
     }
-    
+
     pub fn try_undo(&mut self) -> Option<SwapRecord> {
         if let Some(record) = self.history.pop() {
             self.grid.undo_swap(record);
             self.grid.fill();
             Some(record)
-        }
-        else {
+        } else {
             None
         }
     }

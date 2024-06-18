@@ -35,7 +35,7 @@ pub struct Palette {
     pub yellow: Color32,
     pub green: Color32,
     pub blue: Color32,
-    pub purple: Color32
+    pub purple: Color32,
 }
 
 impl Palette {

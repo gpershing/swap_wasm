@@ -1,7 +1,11 @@
 use egui::ahash::{HashSet, HashSetExt};
 use rand::seq::IteratorRandom;
 
-use crate::{gameplay::{Color, GameGrid, GridSolveState, PuzzleCell}, generator::connections::connect_groups, grids::{Grid, GridIndex}};
+use crate::{
+    gameplay::{Color, GameGrid, GridSolveState, PuzzleCell},
+    generator::connections::connect_groups,
+    grids::{Grid, GridIndex},
+};
 
 use super::GeneratorSettings;
 
@@ -17,7 +21,7 @@ pub fn generate_solution(generator_settings: &GeneratorSettings) -> Grid<PuzzleC
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum GeneratorCell {
     SingleGroup(Color),
-    Intersection(Color, Color)
+    Intersection(Color, Color),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -27,7 +31,9 @@ pub(crate) enum GeneratorFailure {
     CannotAddSource,
 }
 
-fn try_generate_solution(generator_settings: &GeneratorSettings) -> Result<Grid<PuzzleCell>, GeneratorFailure> {
+fn try_generate_solution(
+    generator_settings: &GeneratorSettings,
+) -> Result<Grid<PuzzleCell>, GeneratorFailure> {
     let grid = create_grid_with_knockouts(generator_settings);
     println!("grid created");
     let grid = allocate_groups(grid, generator_settings)?;
@@ -46,9 +52,8 @@ fn create_grid_with_knockouts(generator_settings: &GeneratorSettings) -> Grid<()
         if chance(generator_settings.missing_chance) {
             knockouts += 1;
             positions.swap_remove(random_index(positions.len()));
-        }
-        else {
-            break
+        } else {
+            break;
         }
     }
 
@@ -70,32 +75,38 @@ struct Group {
     color: Color,
     present: HashSet<GridIndex>,
     boundary: HashSet<GridIndex>,
-    intersections: usize
+    intersections: usize,
 }
 
 impl Group {
     fn new(color: Color) -> Self {
-        Self { color, present: HashSet::new(), boundary: HashSet::new(), intersections: 0 }
+        Self {
+            color,
+            present: HashSet::new(),
+            boundary: HashSet::new(),
+            intersections: 0,
+        }
     }
 
     fn status(&self) -> GroupStatus {
         let required = match self.color {
             Color::Red | Color::Orange | Color::Yellow | Color::Purple => 2,
-            Color::Green | Color::Blue => 1
+            Color::Green | Color::Blue => 1,
         };
         if required > self.present.len() {
             GroupStatus::TooSmall
-        }
-        else if self.intersections >= self.present.len() {
+        } else if self.intersections >= self.present.len() {
             GroupStatus::MaxIntersections
-        }
-        else {
+        } else {
             GroupStatus::Happy
         }
     }
 }
 
-fn allocate_groups(grid: Grid<()>, generator_settings: &GeneratorSettings) -> Result<Grid<GeneratorCell>, GeneratorFailure> {
+fn allocate_groups(
+    grid: Grid<()>,
+    generator_settings: &GeneratorSettings,
+) -> Result<Grid<GeneratorCell>, GeneratorFailure> {
     fn get_group_colors(generator_settings: &GeneratorSettings) -> Vec<Color> {
         let mut groups = vec![Color::Purple];
         let mut possible_groups = vec![Color::Blue, Color::Green];
@@ -111,23 +122,27 @@ fn allocate_groups(grid: Grid<()>, generator_settings: &GeneratorSettings) -> Re
                 if chance(0.5) {
                     groups.push(Color::CCW);
                     possible_groups.push(Color::CW);
-                }
-                else {
+                } else {
                     groups.push(Color::CW);
                     possible_groups.push(Color::CCW);
                 }
-            },
+            }
         }
         while !possible_groups.is_empty() {
             let mut add = groups.len() < generator_settings.min_regions + 1;
-            if !add { add = chance(generator_settings.extra_region_chance) }
-            if !add { break }
-    
+            if !add {
+                add = chance(generator_settings.extra_region_chance)
+            }
+            if !add {
+                break;
+            }
+
             groups.push(possible_groups.swap_remove(random_index(possible_groups.len())));
         }
         groups
     }
-    let mut groups: Vec<_> = get_group_colors(generator_settings).into_iter()
+    let mut groups: Vec<_> = get_group_colors(generator_settings)
+        .into_iter()
         .map(Group::new)
         .collect();
     let mut group_grid = Grid::with_size(grid.size());
@@ -138,27 +153,31 @@ fn allocate_groups(grid: Grid<()>, generator_settings: &GeneratorSettings) -> Re
         groups.sort_by_key(|g| g.status());
         if let Some(group) = groups.last() {
             let add = if group.present.is_empty() {
-                let position = grid.iter().map(|(p, _)| p).filter(|p| !group_grid.contains(*p)).choose(&mut rand::thread_rng()).unwrap();
+                let position = grid
+                    .iter()
+                    .map(|(p, _)| p)
+                    .filter(|p| !group_grid.contains(*p))
+                    .choose(&mut rand::thread_rng())
+                    .unwrap();
                 Ok(position)
-            }
-            else if let Some(&position) = group.boundary.iter().choose(&mut rand::thread_rng()) {
+            } else if let Some(&position) = group.boundary.iter().choose(&mut rand::thread_rng()) {
                 let add = match group_grid.get(position) {
                     Some(GeneratorCell::SingleGroup(in_group)) => {
-                        *in_group != group.color && intersections_left > 0 && chance(generator_settings.intersection_chance)
-                    },
+                        *in_group != group.color
+                            && intersections_left > 0
+                            && chance(generator_settings.intersection_chance)
+                    }
                     Some(GeneratorCell::Intersection(_, _)) => false,
                     None => true,
                 };
                 if add {
                     Ok(position)
-                }
-                else {
+                } else {
                     Err(Some(position))
                 }
-            }
-            else {
+            } else {
                 if group.status() != GroupStatus::Happy {
-                    return Err(GeneratorFailure::RandomFailure)
+                    return Err(GeneratorFailure::RandomFailure);
                 }
                 groups.pop();
                 Err(None)
@@ -167,33 +186,38 @@ fn allocate_groups(grid: Grid<()>, generator_settings: &GeneratorSettings) -> Re
                 let group = groups.last_mut().unwrap();
                 group.present.insert(position);
                 group.boundary.remove(&position);
-                group.boundary.extend(grid.iter_neighbors(position).map(|(p, _, _)| p));
+                group
+                    .boundary
+                    .extend(grid.iter_neighbors(position).map(|(p, _, _)| p));
 
                 let intersection = match group_grid.get(position) {
                     Some(GeneratorCell::SingleGroup(in_group)) => Some(in_group),
                     Some(GeneratorCell::Intersection(_, _)) => panic!(),
                     None => None,
-                }.cloned();
+                }
+                .cloned();
 
                 if let Some(intersect) = intersection {
                     intersections_left -= 1;
-                    *group_grid.get_mut(position).unwrap() = GeneratorCell::Intersection(intersect, group.color);
+                    *group_grid.get_mut(position).unwrap() =
+                        GeneratorCell::Intersection(intersect, group.color);
                     group.intersections += 1;
-                    if let Some(other_group) = groups.iter_mut().find(|group| group.color == intersect) {
+                    if let Some(other_group) =
+                        groups.iter_mut().find(|group| group.color == intersect)
+                    {
                         other_group.intersections += 1;
                     }
+                } else {
+                    group_grid
+                        .insert(position, GeneratorCell::SingleGroup(group.color))
+                        .unwrap();
                 }
-                else {
-                    group_grid.insert(position, GeneratorCell::SingleGroup(group.color)).unwrap();
-                }
-            }
-            else if let Err(Some(failure)) = add {
+            } else if let Err(Some(failure)) = add {
                 let group = groups.last_mut().unwrap();
                 group.boundary.remove(&failure);
             }
-        }
-        else {
-            break
+        } else {
+            break;
         }
     }
 
@@ -203,7 +227,7 @@ fn allocate_groups(grid: Grid<()>, generator_settings: &GeneratorSettings) -> Re
 fn verify(grid: Grid<PuzzleCell>) -> Result<Grid<PuzzleCell>, GeneratorFailure> {
     let game_grid = Grid::from_puzzle_grid(grid.clone());
     if game_grid.is_solved() != GridSolveState::Solved {
-        return Err(GeneratorFailure::ResultNotSolved)
+        return Err(GeneratorFailure::ResultNotSolved);
     }
     Ok(grid)
 }

@@ -1,10 +1,9 @@
 use super::Direction;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub struct GridIndex {
     pub x: usize,
-    pub y: usize
+    pub y: usize,
 }
 
 impl GridIndex {
@@ -14,10 +13,16 @@ impl GridIndex {
 
     pub fn moved_in(self, direction: Direction) -> Option<Self> {
         match direction {
-            Direction::E => Some(GridIndex { x: self.x + 1, y: self.y }),
+            Direction::E => Some(GridIndex {
+                x: self.x + 1,
+                y: self.y,
+            }),
             Direction::N => self.y.checked_sub(1).map(|y| GridIndex { x: self.x, y }),
             Direction::W => self.x.checked_sub(1).map(|x| GridIndex { x, y: self.y }),
-            Direction::S => Some(GridIndex { x: self.x, y: self.y + 1 }),
+            Direction::S => Some(GridIndex {
+                x: self.x,
+                y: self.y + 1,
+            }),
         }
     }
 }

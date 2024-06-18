@@ -7,7 +7,7 @@ pub enum Direction {
     E,
     N,
     W,
-    S
+    S,
 }
 
 impl Direction {

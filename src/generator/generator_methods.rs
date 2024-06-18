@@ -1,18 +1,20 @@
+use crate::{
+    gameplay::{Cell, Color, GameGrid, GridSolveState, Puzzle, SwapRecord},
+    generator::solver::find_solution,
+    grids::{Grid, GridIndex, GridSize, Rotation},
+};
 use rand::prelude::*;
-use crate::{gameplay::{Cell, Color, GameGrid, GridSolveState, Puzzle, SwapRecord}, generator::solver::find_solution, grids::{Grid, GridIndex, GridSize, Rotation}};
 
 use super::solutions::generate_solution;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum SourceSettings {
     None,
     Maybe,
-    Definitely
+    Definitely,
 }
 
-#[derive(Debug, Clone)]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct GeneratorSettings {
     // Size of the grid.
     pub size: GridSize,
@@ -42,7 +44,7 @@ pub struct GeneratorSettings {
     // and attempt to find a longer solution.
     pub check_solution_len: usize,
     // If solution check fails, how many times to we retry before giving up.
-    pub check_solution_retries: usize
+    pub check_solution_retries: usize,
 }
 
 impl Default for GeneratorSettings {
@@ -61,7 +63,7 @@ impl Default for GeneratorSettings {
             max_intersections: 0,
             knockout_loop_chance: 0.33,
             check_solution_len: 1,
-            check_solution_retries: 3
+            check_solution_retries: 3,
         }
     }
 }
@@ -72,7 +74,7 @@ pub fn generate_puzzle(generator_settings: &GeneratorSettings) -> Puzzle {
     }
     loop {
         if let Some(puzzle) = try_generate_puzzle(generator_settings) {
-            break puzzle
+            break puzzle;
         }
     }
 }
@@ -83,41 +85,60 @@ fn try_generate_puzzle(generator_settings: &GeneratorSettings) -> Option<Puzzle>
 
     let mut solution = reverse_solution(&mut working_grid, generator_settings.swap_count);
     if solution.is_empty() {
-        return None
+        return None;
     }
     println!("initial {:?}", solution);
 
-    let mut puzzle = create_puzzle_from_grid(&mut working_grid, solution.len() as u8, solution.first().copied().unwrap());
+    let mut puzzle = create_puzzle_from_grid(
+        &mut working_grid,
+        solution.len() as u8,
+        solution.first().copied().unwrap(),
+    );
 
-    let check = generator_settings.check_solution_len.min(generator_settings.swap_count as usize - 1);
+    let check = generator_settings
+        .check_solution_len
+        .min(generator_settings.swap_count as usize - 1);
     for _ in 0..generator_settings.check_solution_retries {
         if let Some(shorter_solution) = find_solution(&puzzle, check as u8) {
-            let remaining = reverse_solution(&mut working_grid, generator_settings.swap_count - shorter_solution.len() as u8);
+            let remaining = reverse_solution(
+                &mut working_grid,
+                generator_settings.swap_count - shorter_solution.len() as u8,
+            );
             solution = [remaining, shorter_solution].concat();
             if solution.is_empty() {
-                return None
+                return None;
             }
-            puzzle = create_puzzle_from_grid(&mut working_grid, solution.len() as u8, solution.first().copied().unwrap());
+            puzzle = create_puzzle_from_grid(
+                &mut working_grid,
+                solution.len() as u8,
+                solution.first().copied().unwrap(),
+            );
             println!("retry {:?}", solution);
-        }
-        else {
+        } else {
             break;
         }
     }
 
     if Grid::from_puzzle_grid(puzzle.start().clone()).is_solved() == GridSolveState::Solved {
-        return None
+        return None;
     }
 
     Some(puzzle)
 }
 
-fn create_puzzle_from_grid(game_grid: &mut Grid<Cell>, swaps: u8, first_move: SwapRecord) -> Puzzle {
+fn create_puzzle_from_grid(
+    game_grid: &mut Grid<Cell>,
+    swaps: u8,
+    first_move: SwapRecord,
+) -> Puzzle {
     game_grid.fill();
-    let hint = if game_grid.get(first_move.a).map(|cell| cell.has_color_in_any_layer(Color::SWAP)).unwrap_or(false) {
+    let hint = if game_grid
+        .get(first_move.a)
+        .map(|cell| cell.has_color_in_any_layer(Color::SWAP))
+        .unwrap_or(false)
+    {
         first_move.b
-    }
-    else {
+    } else {
         first_move.a
     };
 
@@ -138,16 +159,20 @@ fn swap_record_matches(grid: &Grid<Cell>, record: SwapRecord) -> bool {
 fn swap_is_trivial(grid: &Grid<Cell>, record: SwapRecord) -> bool {
     let a = grid.get(record.a).unwrap();
     let b = grid.get(record.b).unwrap();
-    if a.source() != b.source() { return false; }
-    if a.get_layer_count() != b.get_layer_count() { return false; }
+    if a.source() != b.source() {
+        return false;
+    }
+    if a.get_layer_count() != b.get_layer_count() {
+        return false;
+    }
 
     let layers_a: Vec<_> = a.iter_layers().collect();
     let layers_b: Vec<_> = b.iter_layers().collect();
     if layers_a.len() == 1 {
-        layers_a[0].connections == layers_b[0].connections.rotated(record.a_rotation.inverse()) &&
-        layers_b[0].connections == layers_a[0].connections.rotated(record.b_rotation.inverse())
-    }
-    else {
+        layers_a[0].connections == layers_b[0].connections.rotated(record.a_rotation.inverse())
+            && layers_b[0].connections
+                == layers_a[0].connections.rotated(record.b_rotation.inverse())
+    } else {
         false // rare enough that we can ignore.
     }
 }
@@ -157,9 +182,8 @@ fn reverse_solution(grid: &mut Grid<Cell>, swaps: u8) -> Vec<SwapRecord> {
     for _ in 0..swaps {
         if let Some(record) = reverse_swap(grid) {
             solution.push(record);
-        }
-        else {
-            break
+        } else {
+            break;
         }
     }
     solution.reverse();
@@ -168,35 +192,51 @@ fn reverse_solution(grid: &mut Grid<Cell>, swaps: u8) -> Vec<SwapRecord> {
 
 fn reverse_swap(grid: &mut Grid<Cell>) -> Option<SwapRecord> {
     let mut possible_rotations = vec![Rotation::None];
-    if grid.iter_layers().any(|layer| layer.1.fill.contains(Color::CCW)) {
+    if grid
+        .iter_layers()
+        .any(|layer| layer.1.fill.contains(Color::CCW))
+    {
         possible_rotations.push(Rotation::CounterClockwise);
     }
-    if grid.iter_layers().any(|layer| layer.1.fill.contains(Color::CW)) {
+    if grid
+        .iter_layers()
+        .any(|layer| layer.1.fill.contains(Color::CW))
+    {
         possible_rotations.push(Rotation::Clockwise);
     }
-    let positions: Vec<_> = grid.iter().filter(|(_, c)| c.source() != Some(Color::Red))
-        .map(|(p, _)| p).collect();
+    let positions: Vec<_> = grid
+        .iter()
+        .filter(|(_, c)| c.source() != Some(Color::Red))
+        .map(|(p, _)| p)
+        .collect();
     let mut selected: [GridIndex; 2] = [GridIndex { x: 0, y: 0 }, GridIndex { x: 0, y: 0 }];
     let mut rotations: [Rotation; 2] = [Rotation::None, Rotation::None];
     for _ in 0..999 {
-        positions.choose_multiple(&mut rand::thread_rng(), selected.len())
-            .zip(selected.iter_mut()).for_each(|(s, buf)| *buf = *s);
-        rotations.iter_mut().for_each(|buf| *buf = *possible_rotations.choose(&mut rand::thread_rng()).unwrap());
+        positions
+            .choose_multiple(&mut rand::thread_rng(), selected.len())
+            .zip(selected.iter_mut())
+            .for_each(|(s, buf)| *buf = *s);
+        rotations
+            .iter_mut()
+            .for_each(|buf| *buf = *possible_rotations.choose(&mut rand::thread_rng()).unwrap());
 
         let record = SwapRecord::new(selected[0], selected[1], rotations[0], rotations[1]);
-        
+
         if swap_is_trivial(grid, record) {
             continue;
         }
         grid.swap(record.a, record.b);
-        grid.get_mut(record.a).unwrap().rotate(record.a_rotation.inverse());
-        grid.get_mut(record.b).unwrap().rotate(record.b_rotation.inverse());
+        grid.get_mut(record.a)
+            .unwrap()
+            .rotate(record.a_rotation.inverse());
+        grid.get_mut(record.b)
+            .unwrap()
+            .rotate(record.b_rotation.inverse());
         grid.fill();
 
         if swap_record_matches(grid, record) {
-            return Some(record)
-        }
-        else {
+            return Some(record);
+        } else {
             grid.get_mut(record.a).unwrap().rotate(record.a_rotation);
             grid.get_mut(record.b).unwrap().rotate(record.b_rotation);
             grid.swap(record.a, record.b);

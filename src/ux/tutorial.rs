@@ -19,8 +19,7 @@ pub fn tutorial_window(ctx: &Context, open: &mut bool) {
 fn draw_tutorial_window(ui: &mut Ui) {
     let palette = if ui.ctx().style().visuals.dark_mode {
         &palette::DARK
-    }
-    else {
+    } else {
         &palette::DEFAULT
     };
 
@@ -33,12 +32,15 @@ fn draw_tutorial_window(ui: &mut Ui) {
     ui.label("");
 
     ui.label("Each puzzle has a limit to the number of swaps, given by the flowers below the puzzle. You may continue swapping after you've hit the limit, but the puzzle won't be considered solved.");
-    
+
     ui.label("");
 
     ui.heading("Source Effects");
     ui.label("Source tiles have a small icon in the center. Source tiles and all connected tiles have certain effects:");
-    let grid_spacing = Vec2::new(ui.spacing().item_spacing.x * 0.25, ui.spacing().item_spacing.y);
+    let grid_spacing = Vec2::new(
+        ui.spacing().item_spacing.x * 0.25,
+        ui.spacing().item_spacing.y,
+    );
     egui::Grid::new("tutorial_effects_grid")
         .num_columns(2)
         .spacing(grid_spacing)
@@ -52,32 +54,76 @@ fn draw_tutorial_window(ui: &mut Ui) {
             ui.style_mut().wrap = Some(true);
 
             let (_, painter) = ui.allocate_painter(icon_size, Sense::focusable_noninteractive());
-            draw_source(&painter, Color::SWAP, painter.clip_rect().center(), painter.clip_rect().size().min_elem() * 0.45, palette, 0.0);
-            ui.label("May be swapped. At least one tile in a swap must be connected to a swap source.");
+            draw_source(
+                &painter,
+                Color::SWAP,
+                painter.clip_rect().center(),
+                painter.clip_rect().size().min_elem() * 0.45,
+                palette,
+                0.0,
+            );
+            ui.label(
+                "May be swapped. At least one tile in a swap must be connected to a swap source.",
+            );
             ui.end_row();
 
             let (_, painter) = ui.allocate_painter(icon_size, Sense::focusable_noninteractive());
-            draw_source(&painter, Color::Blue, painter.clip_rect().center(), painter.clip_rect().size().min_elem() * 0.45, palette, 0.0);
+            draw_source(
+                &painter,
+                Color::Blue,
+                painter.clip_rect().center(),
+                painter.clip_rect().size().min_elem() * 0.45,
+                palette,
+                0.0,
+            );
             ui.label("No effect.");
             ui.end_row();
 
             let (_, painter) = ui.allocate_painter(icon_size, Sense::focusable_noninteractive());
-            draw_source(&painter, Color::Green, painter.clip_rect().center(), painter.clip_rect().size().min_elem() * 0.45, palette, 0.0);
+            draw_source(
+                &painter,
+                Color::Green,
+                painter.clip_rect().center(),
+                painter.clip_rect().size().min_elem() * 0.45,
+                palette,
+                0.0,
+            );
             ui.label("No effect.");
             ui.end_row();
 
             let (_, painter) = ui.allocate_painter(icon_size, Sense::focusable_noninteractive());
-            draw_source(&painter, Color::CW, painter.clip_rect().center(), painter.clip_rect().size().min_elem() * 0.45, palette, ui.input(|i| i.time) as f32);
+            draw_source(
+                &painter,
+                Color::CW,
+                painter.clip_rect().center(),
+                painter.clip_rect().size().min_elem() * 0.45,
+                palette,
+                ui.input(|i| i.time) as f32,
+            );
             ui.label("Rotates clockwise when swapped.");
             ui.end_row();
 
             let (_, painter) = ui.allocate_painter(icon_size, Sense::focusable_noninteractive());
-            draw_source(&painter, Color::CCW, painter.clip_rect().center(), painter.clip_rect().size().min_elem() * 0.45, palette, ui.input(|i| i.time) as f32);
+            draw_source(
+                &painter,
+                Color::CCW,
+                painter.clip_rect().center(),
+                painter.clip_rect().size().min_elem() * 0.45,
+                palette,
+                ui.input(|i| i.time) as f32,
+            );
             ui.label("Rotates counterclockwise when swapped.");
             ui.end_row();
 
             let (_, painter) = ui.allocate_painter(icon_size, Sense::focusable_noninteractive());
-            draw_source(&painter, Color::STOP, painter.clip_rect().center(), painter.clip_rect().size().min_elem() * 0.45, palette, 0.0);
+            draw_source(
+                &painter,
+                Color::STOP,
+                painter.clip_rect().center(),
+                painter.clip_rect().size().min_elem() * 0.45,
+                palette,
+                0.0,
+            );
             ui.label("May never be swapped.");
             ui.end_row();
         });

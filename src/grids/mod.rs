@@ -1,12 +1,12 @@
-mod rotation;
 mod direction;
+mod direction_map;
+mod grid;
 mod grid_index;
 mod grid_size;
-mod grid;
-mod direction_map;
-pub use rotation::*;
+mod rotation;
 pub use direction::*;
 pub use direction_map::*;
+pub use grid::*;
 pub use grid_index::*;
 pub use grid_size::*;
-pub use grid::*;
+pub use rotation::*;
