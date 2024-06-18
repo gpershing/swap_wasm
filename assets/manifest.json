@@ -1,6 +1,6 @@
 {
-  "name": "egui Template PWA",
-  "short_name": "egui-template-pwa",
+  "name": "swap",
+  "short_name": "swap",
   "icons": [
     {
       "src": "./icon-256.png",
